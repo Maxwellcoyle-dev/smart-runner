@@ -1,5 +1,8 @@
 // Use environment variable in production, or proxy in development
-export const API_BASE_URL = process.env.REACT_APP_API_URL || "/api";
+// If REACT_APP_API_URL is set and doesn't end with /api, append it
+const baseUrl = process.env.REACT_APP_API_URL || "/api";
+export const API_BASE_URL =
+  baseUrl.endsWith("/api") || baseUrl === "/api" ? baseUrl : `${baseUrl}/api`;
 
 // Expose for debugging (will be replaced at build time)
 if (typeof window !== "undefined") {

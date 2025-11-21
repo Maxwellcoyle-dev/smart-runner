@@ -1,4 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
+import apiFetch from "../services/api";
+import { API_BASE_URL } from "../constants/config";
 
 const AuthContext = createContext();
 
@@ -18,17 +20,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (token) {
       // Verify token and get user info
-      fetch("/api/auth/me", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-        .then((res) => {
-          if (res.ok) {
-            return res.json();
-          }
-          throw new Error("Token invalid");
-        })
+      apiFetch("/auth/me")
         .then((data) => {
           if (data.user) {
             setUser(data.user);
@@ -50,15 +42,12 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await fetch("/api/auth/login", {
+      const data = await apiFetch("/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (data.success) {
         setToken(data.token);
         setUser(data.user);
         localStorage.setItem("token", data.token);
@@ -67,21 +56,18 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: data.error || "Login failed" };
       }
     } catch (error) {
-      return { success: false, error: "Network error. Please try again." };
+      return { success: false, error: error.message || "Network error. Please try again." };
     }
   };
 
   const register = async (email, password) => {
     try {
-      const response = await fetch("/api/auth/register", {
+      const data = await apiFetch("/auth/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (data.success) {
         setToken(data.token);
         setUser(data.user);
         localStorage.setItem("token", data.token);
@@ -90,7 +76,7 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: data.error || "Registration failed" };
       }
     } catch (error) {
-      return { success: false, error: "Network error. Please try again." };
+      return { success: false, error: error.message || "Network error. Please try again." };
     }
   };
 
@@ -99,11 +85,8 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     localStorage.removeItem("token");
     // Call logout endpoint (optional, mainly for server-side tracking)
-    fetch("/api/auth/logout", {
+    apiFetch("/auth/logout", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
     }).catch(console.error);
   };
 
