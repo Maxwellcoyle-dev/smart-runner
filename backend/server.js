@@ -1,5 +1,10 @@
+// Load environment variables
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 const path = require("path");
 const fs = require("fs-extra");
 const sqlite3 = require("sqlite3").verbose();
@@ -10,9 +15,52 @@ const execAsync = promisify(exec);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// Security middleware
+app.use(helmet());
+
+// CORS configuration
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+  : ["http://localhost:3001", "http://localhost:3000"];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use("/api/", limiter);
+
+// Stricter rate limiting for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per windowMs
+  message: "Too many authentication attempts, please try again later.",
+});
+
+app.use("/api/auth/", authLimiter);
+
+// Body parsing
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Paths
 const DATA_DIR = path.join(__dirname, "../data");
@@ -194,24 +242,31 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "Garmin API is running" });
 });
 
+// Authentication routes
+const authRoutes = require("./routes/auth");
+app.use("/api/auth", authRoutes);
+
+// Garmin credential routes
+const garminRoutes = require("./routes/garmin");
+app.use("/api/garmin", garminRoutes);
+
+// Authentication middleware
+const { authenticateToken } = require("./middleware/auth");
+
+// Protected routes - require authentication
 // Get daily summaries with optional date range
-app.get("/api/daily-summaries", async (req, res) => {
+app.get("/api/daily-summaries", authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.id;
     const { startDate, endDate, limit } = req.query;
-    let summaries = await getAllDailySummaries();
 
-    // Filter by date range
-    if (startDate) {
-      summaries = summaries.filter((s) => s.calendarDate >= startDate);
-    }
-    if (endDate) {
-      summaries = summaries.filter((s) => s.calendarDate <= endDate);
-    }
+    const { getDailySummariesByUser } = require("./utils/dataQueries");
 
-    // Limit results
-    if (limit) {
-      summaries = summaries.slice(-parseInt(limit));
-    }
+    const summaries = await getDailySummariesByUser(userId, {
+      startDate,
+      endDate,
+      limit,
+    });
 
     res.json({
       count: summaries.length,
@@ -224,10 +279,16 @@ app.get("/api/daily-summaries", async (req, res) => {
 });
 
 // Get aggregated daily summary stats
-app.get("/api/daily-summaries/aggregated", async (req, res) => {
+app.get("/api/daily-summaries/aggregated", authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.id;
     const { startDate, endDate, groupBy } = req.query;
-    let summaries = await getAllDailySummaries();
+
+    const { getDailySummariesByUser } = require("./utils/dataQueries");
+    let summaries = await getDailySummariesByUser(userId, {
+      startDate,
+      endDate,
+    });
 
     // Filter by date range
     if (startDate) {
@@ -420,32 +481,19 @@ app.get("/api/daily-summaries/aggregated", async (req, res) => {
 });
 
 // Get activities
-app.get("/api/activities", async (req, res) => {
+app.get("/api/activities", authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.id;
     const { type, startDate, endDate, limit } = req.query;
-    let activities = await getAllActivities();
 
-    // Filter by activity type
-    if (type) {
-      activities = activities.filter(
-        (a) =>
-          a.activityType?.typeKey === type ||
-          a.activityType?.typeId === parseInt(type)
-      );
-    }
+    const { getActivitiesByUser } = require("./utils/dataQueries");
 
-    // Filter by date range
-    if (startDate) {
-      activities = activities.filter((a) => a.startTimeGMT >= startDate);
-    }
-    if (endDate) {
-      activities = activities.filter((a) => a.startTimeGMT <= endDate);
-    }
-
-    // Limit results
-    if (limit) {
-      activities = activities.slice(-parseInt(limit));
-    }
+    const activities = await getActivitiesByUser(userId, {
+      type,
+      startDate,
+      endDate,
+      limit,
+    });
 
     res.json({
       count: activities.length,
@@ -472,34 +520,18 @@ function queryDb(sql, params = [], useActivitiesDb = false) {
 }
 
 // Get running activities with detailed stats
-app.get("/api/running", async (req, res) => {
+app.get("/api/running", authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.id;
     const { startDate, endDate, limit } = req.query;
 
-    // Use JSON files for now (database has different schema)
-    let activities = await getAllActivities();
-    let runningActivities = activities.filter(
-      (a) => a.activityType?.typeKey === "running"
-    );
+    const { getRunningActivitiesByUser } = require("./utils/dataQueries");
 
-    if (startDate) {
-      runningActivities = runningActivities.filter(
-        (a) => a.startTimeGMT >= startDate
-      );
-    }
-    if (endDate) {
-      runningActivities = runningActivities.filter(
-        (a) => a.startTimeGMT <= endDate
-      );
-    }
-
-    runningActivities.sort(
-      (a, b) => new Date(b.startTimeGMT) - new Date(a.startTimeGMT)
-    );
-
-    if (limit) {
-      runningActivities = runningActivities.slice(0, parseInt(limit));
-    }
+    const runningActivities = await getRunningActivitiesByUser(userId, {
+      startDate,
+      endDate,
+      limit,
+    });
 
     res.json({
       count: runningActivities.length,
@@ -512,42 +544,44 @@ app.get("/api/running", async (req, res) => {
 });
 
 // Get splits for a specific activity (must come before /api/activities/:id route)
-app.get("/api/activities/:id/splits", async (req, res) => {
+app.get("/api/activities/:id/splits", authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.id;
     const { id } = req.params;
     const { unit } = req.query; // 'km' or 'miles'
 
-    // Query splits from database first
-    const sql = `
-      SELECT 
-        split,
-        distance,
-        elapsed_time,
-        moving_time,
-        avg_speed,
-        max_speed,
-        avg_hr,
-        max_hr,
-        avg_cadence,
-        max_cadence,
-        ascent,
-        descent
-      FROM activity_splits
-      WHERE activity_id = ?
-      ORDER BY split
-    `;
+    // Verify activity belongs to user
+    const { getActivityByUserAndId } = require("./utils/dataQueries");
+    const activity = await getActivityByUserAndId(userId, id);
 
-    let splits = await queryDb(sql, [id], true);
+    if (!activity) {
+      return res.status(404).json({
+        error: "Activity not found",
+        message: "Activity does not exist or you don't have access to it",
+      });
+    }
 
-    // If no splits in database, extract from FIT file
-    if (splits.length === 0) {
-      const splitDistance = unit === "miles" ? 1609.34 : 1000; // meters
+    // Query splits from database first (if we have a splits table)
+    // For now, we'll extract from FIT file in user's directory
+    const splitDistance = unit === "miles" ? 1609.34 : 1000; // meters
 
-      // Find the FIT file for this activity
-      const fitFileName = `${id}_ACTIVITY.fit`;
-      const fitFilePath = path.join(ACTIVITIES_DIR, fitFileName);
+    // Find the FIT file for this activity in user's directory
+    const userDataDir = path.join(
+      process.env.DATA_DIR || path.join(__dirname, "..", "data"),
+      "users",
+      userId
+    );
+    const fitFileName = `${id}_ACTIVITY.fit`;
+    const fitFilePath = path.join(
+      userDataDir,
+      "FitFiles",
+      "Activities",
+      fitFileName
+    );
 
-      if (await fs.pathExists(fitFilePath)) {
+    let splits = [];
+
+    if (await fs.pathExists(fitFilePath)) {
         // Use Python script to extract splits from FIT file
         const scriptPath = path.join(__dirname, "extract_splits.py");
         const command = `"${GARMINDB_PYTHON}" "${scriptPath}" "${fitFilePath}" ${splitDistance}`;
@@ -590,6 +624,9 @@ app.get("/api/activities/:id/splits", async (req, res) => {
           );
           // Fall back to calculating from activity_records if FIT extraction fails
         }
+      } else {
+        // FIT file not found in user's directory
+        console.log(`FIT file not found for activity ${id} in user ${userId}'s directory`);
       }
     }
 
@@ -612,27 +649,17 @@ app.get("/api/activities/:id/splits", async (req, res) => {
 });
 
 // Get aggregated running stats
-app.get("/api/running/stats", async (req, res) => {
+app.get("/api/running/stats", authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.id;
     const { startDate, endDate } = req.query;
-    let activities = await getAllActivities();
 
-    // Filter to only running activities
-    let runningActivities = activities.filter(
-      (a) => a.activityType?.typeKey === "running"
-    );
+    const { getRunningActivitiesByUser } = require("./utils/dataQueries");
 
-    // Filter by date range
-    if (startDate) {
-      runningActivities = runningActivities.filter(
-        (a) => a.startTimeGMT >= startDate
-      );
-    }
-    if (endDate) {
-      runningActivities = runningActivities.filter(
-        (a) => a.startTimeGMT <= endDate
-      );
-    }
+    const runningActivities = await getRunningActivitiesByUser(userId, {
+      startDate,
+      endDate,
+    });
 
     if (runningActivities.length === 0) {
       return res.json({
@@ -724,27 +751,18 @@ app.get("/api/running/stats", async (req, res) => {
 });
 
 // Get aggregated activity stats
-app.get("/api/activities/aggregated", async (req, res) => {
+app.get("/api/activities/aggregated", authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.id;
     const { type, startDate, endDate } = req.query;
-    let activities = await getAllActivities();
 
-    // Filter by activity type
-    if (type) {
-      activities = activities.filter(
-        (a) =>
-          a.activityType?.typeKey === type ||
-          a.activityType?.typeId === parseInt(type)
-      );
-    }
+    const { getActivitiesByUser } = require("./utils/dataQueries");
 
-    // Filter by date range
-    if (startDate) {
-      activities = activities.filter((a) => a.startTimeGMT >= startDate);
-    }
-    if (endDate) {
-      activities = activities.filter((a) => a.startTimeGMT <= endDate);
-    }
+    const activities = await getActivitiesByUser(userId, {
+      type,
+      startDate,
+      endDate,
+    });
 
     // Aggregate stats
     const aggregated = {
@@ -811,17 +829,43 @@ app.get("/api/activities/aggregated", async (req, res) => {
 });
 
 // Get activity details with splits (MUST come before /api/activities/:id route)
-app.get("/api/activities/:id/details", async (req, res) => {
+app.get("/api/activities/:id/details", authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.id;
     const { id } = req.params;
+
+    // Verify activity belongs to user
+    const { getActivityByUserAndId } = require("./utils/dataQueries");
+    const activity = await getActivityByUserAndId(userId, id);
+
+    if (!activity) {
+      return res.status(404).json({
+        error: "Activity not found",
+        message: "Activity does not exist or you don't have access to it",
+      });
+    }
+
+    // Try to get detailed data from user's directory
+    const userDataDir = path.join(
+      process.env.DATA_DIR || path.join(__dirname, "..", "data"),
+      "users",
+      userId
+    );
     const detailFilePath = path.join(
-      ACTIVITIES_DIR,
+      userDataDir,
+      "FitFiles",
+      "Activities",
       `activity_details_${id}.json`
     );
-    const detailData = await readJsonFile(detailFilePath);
 
+    let detailData = null;
+    if (await fs.pathExists(detailFilePath)) {
+      detailData = await readJsonFile(detailFilePath);
+    }
+
+    // If no detail file, return the activity data we have
     if (!detailData) {
-      return res.status(404).json({ error: "Activity details not found" });
+      detailData = activity;
     }
 
     res.json(detailData);
@@ -832,32 +876,141 @@ app.get("/api/activities/:id/details", async (req, res) => {
 });
 
 // Sync data from Garmin Connect
-app.post("/api/sync", async (req, res) => {
+app.post("/api/sync", authenticateToken, async (req, res) => {
   try {
-    // Load last sync state
-    const syncState = await loadSyncState();
-    let lastSyncDate = syncState.lastSyncDate;
+    const userId = req.user.id;
 
-    // If no last sync date, get the most recent date from existing data
-    if (!lastSyncDate) {
-      lastSyncDate = await getMostRecentDate();
-      console.log(
-        `No previous sync found. Most recent data date: ${lastSyncDate}`
-      );
+    // Get user's Garmin credentials
+    const { getOne, query } = require("./config/database");
+    const { decrypt } = require("./utils/encryption");
+
+    // Check if sync is already running for this user
+    const runningSync = await getOne(
+      "SELECT id FROM sync_logs WHERE user_id = $1 AND status = 'running'",
+      [userId]
+    );
+
+    if (runningSync) {
+      return res.status(409).json({
+        success: false,
+        error: "Sync already in progress",
+        message: "Please wait for the current sync to complete",
+      });
+    }
+
+    // Create sync log entry (status: running)
+    const syncLogResult = await query(
+      `INSERT INTO sync_logs (user_id, status, started_at)
+       VALUES ($1, 'running', NOW())
+       RETURNING id`,
+      [userId]
+    ).catch((err) => {
+      // If sync_logs table doesn't exist, continue without logging
+      console.warn("Could not create sync log:", err.message);
+      return { rows: [] };
+    });
+
+    const syncLogId = syncLogResult.rows?.[0]?.id;
+
+    const creds = await getOne(
+      "SELECT encrypted_email, encrypted_password FROM garmin_credentials WHERE user_id = $1",
+      [userId]
+    );
+
+    if (!creds) {
+      // Update sync log to failed
+      if (syncLogId) {
+        await query(
+          "UPDATE sync_logs SET status = 'failed', completed_at = NOW(), error_message = $1 WHERE id = $2",
+          ["Garmin account not connected", syncLogId]
+        ).catch(() => {});
+      }
+
+      return res.status(400).json({
+        success: false,
+        error: "Garmin account not connected",
+        message: "Please connect your Garmin account in settings before syncing",
+      });
+    }
+
+    // Decrypt credentials
+    const email = decrypt(creds.encrypted_email);
+    const password = decrypt(creds.encrypted_password);
+
+    // Get last sync date from database or file-based state
+    const { getMostRecentDateForUser } = require("./utils/dataQueries");
+    const credsWithSync = await getOne(
+      "SELECT last_sync FROM garmin_credentials WHERE user_id = $1",
+      [userId]
+    );
+
+    let lastSyncDate = null;
+    if (credsWithSync?.last_sync) {
+      lastSyncDate = credsWithSync.last_sync.toISOString().split("T")[0];
     } else {
+      // Fallback to file-based sync state for migration
+      const syncState = await loadSyncState();
+      lastSyncDate = syncState.lastSyncDate;
+      
+      // If still no date, get from user's existing data
+      if (!lastSyncDate) {
+        lastSyncDate = await getMostRecentDateForUser(userId);
+        console.log(
+          `No previous sync found. Most recent data date: ${lastSyncDate}`
+        );
+      }
+    }
+
+    if (lastSyncDate) {
       console.log(`Last sync date: ${lastSyncDate}`);
     }
 
+    // Create user-specific data directory
+    const workDir = path.join(process.env.DATA_DIR || path.join(__dirname, "..", "data"), "users", userId);
+    await fs.ensureDir(workDir);
+    const configDir = path.join(workDir, "tokens");
+    await fs.ensureDir(configDir);
+
+    // Create GarminConnectConfig.json for this user
+    const config = {
+      db: { type: "sqlite" },
+      garmin: { domain: "garmin.com" },
+      credentials: {
+        user: email,
+        secure_password: false,
+        password: password,
+        password_file: null,
+      },
+      data: {
+        download_latest_activities: 25,
+        download_all_activities: 1000,
+      },
+      directories: {
+        relative_to_home: false,
+        base_dir: workDir,
+      },
+      enabled_stats: {
+        monitoring: true,
+        steps: true,
+        itime: true,
+        sleep: true,
+        rhr: true,
+        weight: true,
+        activities: true,
+      },
+    };
+
+    await fs.writeFile(
+      path.join(configDir, "GarminConnectConfig.json"),
+      JSON.stringify(config, null, 2)
+    );
+
     // Build garmindb command
-    // Note: garmindb_cli doesn't have a direct "sync since date" option,
-    // but it skips files that already exist, so we can just run it
-    // and it will only download new data
-    // Use the Python from the pipx virtual environment
-    const workDir = path.join(__dirname, "..");
-    const configDir = path.join(workDir, "data/tokens");
     // Use -A for all stats, -d for download, -i for import, --analyze for analysis
     // Use -f to specify the config directory (garmindb looks for GarminConnectConfig.json in that dir)
-    const command = `cd "${workDir}" && "${GARMINDB_PYTHON}" "${GARMINDB_CLI}" -f "${configDir}" -A -d -i --analyze`;
+    const garmindbPython = process.env.GARMINDB_PYTHON || GARMINDB_PYTHON;
+    const garmindbCli = process.env.GARMINDB_CLI || GARMINDB_CLI;
+    const command = `cd "${workDir}" && "${garmindbPython}" "${garmindbCli}" -f "${configDir}" -A -d -i --analyze`;
 
     console.log("Starting Garmin data sync...");
     const startTime = Date.now();
@@ -891,6 +1044,17 @@ app.post("/api/sync", async (req, res) => {
         );
         // Continue as partial success - some data was synced
       } else if (exitCode && exitCode !== 0) {
+        // Update sync log to failed
+        if (syncLogId) {
+          await query(
+            "UPDATE sync_logs SET status = 'failed', completed_at = NOW(), error_message = $1 WHERE id = $2",
+            [
+              `Garmin sync command failed (exit code ${exitCode})`,
+              syncLogId,
+            ]
+          ).catch(() => {});
+        }
+
         throw new Error(
           `Garmin sync command failed (exit code ${exitCode}): ${
             stderr || execError.message
@@ -905,8 +1069,18 @@ app.post("/api/sync", async (req, res) => {
     const endTime = Date.now();
     const duration = Math.round((endTime - startTime) / 1000);
 
+    // Process synced data and store in database
+    const { processSyncedData } = require("./utils/dataProcessing");
+    const { getMostRecentDateForUser } = require("./utils/dataQueries");
+    
+    console.log("Processing synced data into database...");
+    const processingResult = await processSyncedData(userId, workDir);
+    console.log(
+      `Processed ${processingResult.totalProcessed} items (${processingResult.totalErrors} errors)`
+    );
+
     // Get the new most recent date after sync
-    const newMostRecentDate = await getMostRecentDate();
+    const newMostRecentDate = await getMostRecentDateForUser(userId);
 
     // Update sync state
     const newSyncState = {
@@ -916,7 +1090,27 @@ app.post("/api/sync", async (req, res) => {
     };
     await saveSyncState(newSyncState);
 
-    console.log(`Sync completed in ${duration} seconds`);
+    // Update last_sync in database
+    await query(
+      "UPDATE garmin_credentials SET last_sync = NOW() WHERE user_id = $1",
+      [userId]
+    );
+
+    // Update sync log entry to completed
+    if (syncLogId) {
+      await query(
+        `UPDATE sync_logs 
+         SET status = 'completed', 
+             completed_at = NOW(), 
+             activities_synced = $1
+         WHERE id = $2`,
+        [processingResult.activities.processed || 0, syncLogId]
+      ).catch((err) => {
+        console.warn("Could not update sync log:", err.message);
+      });
+    }
+
+    console.log(`Sync completed in ${duration} seconds for user ${userId}`);
     console.log(`New most recent date: ${newMostRecentDate}`);
 
     res.json({
@@ -931,6 +1125,27 @@ app.post("/api/sync", async (req, res) => {
   } catch (error) {
     console.error("Error syncing data:", error);
     console.error("Full error:", JSON.stringify(error, null, 2));
+
+    // Update sync log to failed if we have a log ID
+    const { query } = require("./config/database");
+    const syncLogResult = await query(
+      `SELECT id FROM sync_logs 
+       WHERE user_id = $1 AND status = 'running' 
+       ORDER BY started_at DESC LIMIT 1`,
+      [req.user.id]
+    ).catch(() => ({ rows: [] }));
+
+    if (syncLogResult.rows?.[0]?.id) {
+      await query(
+        `UPDATE sync_logs 
+         SET status = 'failed', 
+             completed_at = NOW(), 
+             error_message = $1
+         WHERE id = $2`,
+        [error.message, syncLogResult.rows[0].id]
+      ).catch(() => {});
+    }
+
     res.status(500).json({
       success: false,
       error: "Failed to sync data",
@@ -941,16 +1156,31 @@ app.post("/api/sync", async (req, res) => {
 });
 
 // Get sync status
-app.get("/api/sync/status", async (req, res) => {
+app.get("/api/sync/status", authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.id;
+    const { getMostRecentDateForUser } = require("./utils/dataQueries");
+    const { getOne } = require("./config/database");
+
+    // Get last sync from database
+    const creds = await getOne(
+      "SELECT last_sync FROM garmin_credentials WHERE user_id = $1",
+      [userId]
+    );
+
     const syncState = await loadSyncState();
-    const mostRecentDate = await getMostRecentDate();
+    const mostRecentDate = await getMostRecentDateForUser(userId);
+    const lastSyncDate = creds?.last_sync
+      ? creds.last_sync.toISOString().split("T")[0]
+      : syncState.lastSyncDate;
 
     res.json({
-      lastSyncDate: syncState.lastSyncDate,
-      lastSyncTime: syncState.lastSyncTime,
+      lastSyncDate: lastSyncDate,
+      lastSyncTime: creds?.last_sync
+        ? creds.last_sync.toISOString()
+        : syncState.lastSyncTime,
       mostRecentDataDate: mostRecentDate,
-      needsSync: syncState.lastSyncDate !== mostRecentDate,
+      needsSync: lastSyncDate !== mostRecentDate,
     });
   } catch (error) {
     console.error("Error getting sync status:", error);
@@ -959,10 +1189,16 @@ app.get("/api/sync/status", async (req, res) => {
 });
 
 // Get health metrics (steps, heart rate, stress, etc.)
-app.get("/api/health-metrics", async (req, res) => {
+app.get("/api/health-metrics", authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.id;
     const { metric, startDate, endDate } = req.query;
-    let summaries = await getAllDailySummaries();
+
+    const { getDailySummariesByUser } = require("./utils/dataQueries");
+    let summaries = await getDailySummariesByUser(userId, {
+      startDate,
+      endDate,
+    });
 
     // Filter by date range
     if (startDate) {
@@ -1012,9 +1248,17 @@ app.get("/api/health-metrics", async (req, res) => {
   }
 });
 
+// Health check endpoint (for Railway/Vercel)
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 // Start server
-app.listen(PORT, () => {
-  console.log(`Garmin API server running on http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Garmin API server running on port ${PORT}`);
+  if (process.env.NODE_ENV === "production") {
+    console.log(`Production mode - Server ready to accept connections`);
+  }
 });
 
 // Graceful shutdown
