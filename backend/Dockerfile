@@ -18,11 +18,15 @@ COPY package*.json ./
 # Install Node.js dependencies
 RUN npm ci --only=production
 
-# Install garmindb globally
-RUN pip3 install --no-cache-dir garmindb
+# Create a virtual environment for garmindb
+RUN python3 -m venv /opt/garmindb-venv
+
+# Install garmindb in the virtual environment
+RUN /opt/garmindb-venv/bin/pip install --upgrade pip && \
+    /opt/garmindb-venv/bin/pip install --no-cache-dir garmindb
 
 # Verify garmindb installation
-RUN python3 -m garmindb --help > /dev/null 2>&1 && echo "garmindb installed successfully" || echo "garmindb installation check"
+RUN /opt/garmindb-venv/bin/python -m garmindb --help > /dev/null 2>&1 && echo "garmindb installed successfully" || echo "garmindb installation check"
 
 # Copy application code
 COPY . .
@@ -34,9 +38,10 @@ RUN mkdir -p /app/data/users
 EXPOSE 3000
 
 # Set environment variables for garmindb
-# garmindb can be called as a module: python3 -m garmindb
-ENV GARMINDB_PYTHON=/usr/bin/python3
-ENV GARMINDB_CLI=/usr/local/bin/garmindb_cli.py
+# Use the virtual environment Python and module approach
+ENV GARMINDB_PYTHON=/opt/garmindb-venv/bin/python
+ENV GARMINDB_CLI=/opt/garmindb-venv/bin/garmindb_cli.py
+ENV PATH="/opt/garmindb-venv/bin:${PATH}"
 ENV DATA_DIR=/app/data
 
 # Start the server
