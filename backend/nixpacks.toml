@@ -1,12 +1,12 @@
-# Railway/Nixpacks configuration for Python and garmindb
+# Railway/Nixpacks configuration
+# Note: garmindb installation removed for initial deployment
+# The app will work for registration, login, and Garmin connection
+# Sync feature can be added later once basic deployment works
 [phases.setup]
-nixPkgs = ["python3", "curl", "nodejs_18"]
+nixPkgs = ["nodejs_18"]
 
 [phases.install]
 cmds = [
-  "curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py",
-  "python3 get-pip.py --user",
-  "python3 -m pip install --user garmindb",
   "npm install"
 ]
 

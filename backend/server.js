@@ -1005,11 +1005,37 @@ app.post("/api/sync", authenticateToken, async (req, res) => {
       JSON.stringify(config, null, 2)
     );
 
+    // Check if garmindb is available
+    const garmindbPython = process.env.GARMINDB_PYTHON || GARMINDB_PYTHON;
+    const garmindbCli = process.env.GARMINDB_CLI || GARMINDB_CLI;
+    
+    // Check if garmindb files exist
+    const pythonExists = await fs.pathExists(garmindbPython).catch(() => false);
+    const cliExists = await fs.pathExists(garmindbCli).catch(() => false);
+    
+    if (!pythonExists || !cliExists) {
+      // Update sync log to failed
+      if (syncLogId) {
+        await query(
+          "UPDATE sync_logs SET status = 'failed', completed_at = NOW(), error_message = $1 WHERE id = $2",
+          ["garmindb not installed - sync feature unavailable", syncLogId]
+        ).catch(() => {});
+      }
+
+      return res.status(503).json({
+        success: false,
+        error: "Sync feature unavailable",
+        message: "garmindb is not installed. The sync feature requires garmindb to be installed on the server. Please contact support or check deployment documentation.",
+        garmindbPython,
+        garmindbCli,
+        pythonExists,
+        cliExists,
+      });
+    }
+
     // Build garmindb command
     // Use -A for all stats, -d for download, -i for import, --analyze for analysis
     // Use -f to specify the config directory (garmindb looks for GarminConnectConfig.json in that dir)
-    const garmindbPython = process.env.GARMINDB_PYTHON || GARMINDB_PYTHON;
-    const garmindbCli = process.env.GARMINDB_CLI || GARMINDB_CLI;
     const command = `cd "${workDir}" && "${garmindbPython}" "${garmindbCli}" -f "${configDir}" -A -d -i --analyze`;
 
     console.log("Starting Garmin data sync...");

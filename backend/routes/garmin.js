@@ -52,10 +52,27 @@ async function testGarminConnection(email, password) {
     await fs.ensureDir(path.dirname(configPath));
     await fs.writeFile(configPath, JSON.stringify(testConfig, null, 2));
 
+    // Check if garmindb is available
+    const garmindbPython = process.env.GARMINDB_PYTHON || "/usr/bin/python3";
+    const garmindbCli = process.env.GARMINDB_CLI || "/usr/local/bin/garmindb_cli.py";
+    
+    // Check if garmindb files exist
+    const pythonExists = await fs.pathExists(garmindbPython).catch(() => false);
+    const cliExists = await fs.pathExists(garmindbCli).catch(() => false);
+    
+    if (!pythonExists || !cliExists) {
+      // If garmindb isn't available, skip credential testing
+      // Credentials will be tested on first sync
+      await fs.remove(tempDir).catch(() => {});
+      return {
+        valid: true,
+        message: "Credentials saved (will be verified on first sync)",
+        warning: "garmindb not available for credential testing",
+      };
+    }
+
     // Try to run garmindb with test credentials
     const workDir = tempDir;
-    const garmindbPython = process.env.GARMINDB_PYTHON || "/usr/local/bin/python3";
-    const garmindbCli = process.env.GARMINDB_CLI || "/usr/local/bin/garmindb_cli.py";
     const command = `cd "${workDir}" && "${garmindbPython}" "${garmindbCli}" -f "${path.dirname(configPath)}" -A -d --no-import --no-analyze 2>&1 | head -20`;
 
     try {
