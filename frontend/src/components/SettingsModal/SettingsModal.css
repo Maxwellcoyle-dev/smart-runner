@@ -1,0 +1,134 @@
+/* Garmin Connection Styles */
+.garmin-status {
+  padding: 10px;
+  color: #666;
+}
+
+.garmin-connected {
+  padding: 15px;
+  background: #f0f9ff;
+  border-radius: 8px;
+  border: 1px solid #bae6fd;
+}
+
+.garmin-status-success {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 15px;
+  color: #059669;
+  font-weight: 500;
+}
+
+.last-sync {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: normal;
+}
+
+.garmin-not-connected {
+  padding: 15px;
+  background: #fef3c7;
+  border-radius: 8px;
+  border: 1px solid #fde68a;
+}
+
+.garmin-not-connected p {
+  margin: 0 0 15px 0;
+  color: #92400e;
+}
+
+.garmin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.garmin-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.garmin-form label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.garmin-form input {
+  padding: 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.garmin-form input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.garmin-button {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.garmin-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.garmin-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.garmin-disconnect-button {
+  padding: 8px 16px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background 0.2s;
+}
+
+.garmin-disconnect-button:hover {
+  background: #d32f2f;
+}
+
+.garmin-error {
+  padding: 10px;
+  background: #fee;
+  color: #c33;
+  border-radius: 6px;
+  border: 1px solid #fcc;
+  font-size: 0.9rem;
+}
+
+.garmin-success {
+  padding: 10px;
+  background: #efe;
+  color: #3c3;
+  border-radius: 6px;
+  border: 1px solid #cfc;
+  font-size: 0.9rem;
+}
+
+.settings-divider {
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin: 20px 0;
+}
+
