@@ -1010,8 +1010,15 @@ app.post("/api/sync", authenticateToken, async (req, res) => {
     const garmindbPython = GARMINDB_PYTHON;
     const garmindbCli = GARMINDB_CLI;
     
+    // Log the paths being used for debugging
+    console.log(`[SYNC] Using garmindb Python: ${garmindbPython}`);
+    console.log(`[SYNC] Using garmindb CLI: ${garmindbCli}`);
+    console.log(`[SYNC] GARMINDB_PYTHON env: ${process.env.GARMINDB_PYTHON || 'not set'}`);
+    console.log(`[SYNC] GARMINDB_CLI env: ${process.env.GARMINDB_CLI || 'not set'}`);
+    
     // Check if Python exists (required)
     const pythonExists = await fs.pathExists(garmindbPython).catch(() => false);
+    console.log(`[SYNC] Python exists at ${garmindbPython}: ${pythonExists}`);
     
     // Check if CLI exists (optional - we can use module approach)
     const cliExists = await fs.pathExists(garmindbCli).catch(() => false);
