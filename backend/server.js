@@ -628,7 +628,6 @@ app.get("/api/activities/:id/splits", authenticateToken, async (req, res) => {
         // FIT file not found in user's directory
         console.log(`FIT file not found for activity ${id} in user ${userId}'s directory`);
       }
-    }
 
     if (splits.length === 0) {
       return res
