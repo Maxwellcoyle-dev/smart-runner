@@ -21,7 +21,15 @@ const apiFetch = async (endpoint, options = {}) => {
       ...options.headers,
     };
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const fullUrl = `${API_BASE_URL}${endpoint}`;
+    
+    // Debug logging in production to help troubleshoot
+    if (window.location.hostname.includes("vercel")) {
+      console.log(`[apiFetch] Calling: ${fullUrl}`);
+      console.log(`[apiFetch] API_BASE_URL: ${API_BASE_URL}`);
+    }
+
+    const response = await fetch(fullUrl, {
       ...options,
       headers,
     });

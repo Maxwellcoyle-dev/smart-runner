@@ -1,6 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import apiFetch from "../services/api";
-import { API_BASE_URL } from "../constants/config";
 
 const AuthContext = createContext();
 
@@ -56,7 +55,10 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: data.error || "Login failed" };
       }
     } catch (error) {
-      return { success: false, error: error.message || "Network error. Please try again." };
+      return {
+        success: false,
+        error: error.message || "Network error. Please try again.",
+      };
     }
   };
 
@@ -76,7 +78,10 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: data.error || "Registration failed" };
       }
     } catch (error) {
-      return { success: false, error: error.message || "Network error. Please try again." };
+      return {
+        success: false,
+        error: error.message || "Network error. Please try again.",
+      };
     }
   };
 
@@ -101,4 +106,3 @@ export const AuthProvider = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-
