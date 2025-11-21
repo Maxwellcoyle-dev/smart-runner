@@ -8,6 +8,15 @@ const router = express.Router();
 // Register new user
 router.post("/register", async (req, res) => {
   try {
+    // Validate JWT_SECRET is set
+    if (!process.env.JWT_SECRET) {
+      console.error("JWT_SECRET is not set!");
+      return res.status(500).json({ 
+        error: "Server configuration error",
+        message: "JWT_SECRET not configured"
+      });
+    }
+
     const { email, password } = req.body;
 
     // Validate input
@@ -67,13 +76,28 @@ router.post("/register", async (req, res) => {
     });
   } catch (error) {
     console.error("Registration error:", error);
-    res.status(500).json({ error: "Registration failed" });
+    console.error("Error stack:", error.stack);
+    res.status(500).json({ 
+      error: "Registration failed",
+      message: error.message,
+      // Only include details in development
+      ...(process.env.NODE_ENV === "development" && { details: error.stack })
+    });
   }
 });
 
 // Login
 router.post("/login", async (req, res) => {
   try {
+    // Validate JWT_SECRET is set
+    if (!process.env.JWT_SECRET) {
+      console.error("JWT_SECRET is not set!");
+      return res.status(500).json({ 
+        error: "Server configuration error",
+        message: "JWT_SECRET not configured"
+      });
+    }
+
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -116,7 +140,13 @@ router.post("/login", async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ error: "Login failed" });
+    console.error("Error stack:", error.stack);
+    res.status(500).json({ 
+      error: "Login failed",
+      message: error.message,
+      // Only include details in development
+      ...(process.env.NODE_ENV === "development" && { details: error.stack })
+    });
   }
 });
 
