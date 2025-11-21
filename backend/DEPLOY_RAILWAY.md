@@ -78,21 +78,15 @@ Railway needs Python and garmindb. You have two options:
 
 **Option A: Use Railway's Python (Recommended)**
 
-1. Add a `nixpacks.toml` file in `backend/`:
-
-```toml
-[phases.setup]
-nixPkgs = ["python3", "pip"]
-
-[phases.install]
-cmds = ["pip install --user garmindb"]
-```
+1. The `nixpacks.toml` file is already in `backend/` (it's been created for you)
 
 2. Update environment variables:
 ```
-GARMINDB_PYTHON=/root/.local/bin/python3
+GARMINDB_PYTHON=/usr/bin/python3
 GARMINDB_CLI=/root/.local/bin/garmindb_cli.py
 ```
+
+Note: The nixpacks.toml uses `python3 -m pip` since pip comes with Python in Nix.
 
 **Option B: Use system Python (if available)**
 

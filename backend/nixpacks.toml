@@ -1,10 +1,10 @@
 # Railway/Nixpacks configuration for Python and garmindb
 [phases.setup]
-nixPkgs = ["python3", "pip", "nodejs_18"]
+nixPkgs = ["python3", "nodejs_18"]
 
 [phases.install]
 cmds = [
-  "pip install --user garmindb",
+  "python3 -m pip install --user garmindb",
   "npm install"
 ]
 
