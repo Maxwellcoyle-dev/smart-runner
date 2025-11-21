@@ -1096,7 +1096,6 @@ app.post("/api/sync", authenticateToken, async (req, res) => {
 
     // Process synced data and store in database
     const { processSyncedData } = require("./utils/dataProcessing");
-    const { getMostRecentDateForUser } = require("./utils/dataQueries");
     
     console.log("Processing synced data into database...");
     const processingResult = await processSyncedData(userId, workDir);
