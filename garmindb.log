@@ -1,0 +1,285 @@
+INFO:/Users/maxwell-coyle/.local/pipx/venvs/garmindb/lib/python3.11/site-packages/idbutils/version.py:/Users/maxwell-coyle/.local/bin/garmindb_cli.py has been tested on Python 1...1...0
+INFO:/Users/maxwell-coyle/.local/pipx/venvs/garmindb/lib/python3.11/site-packages/idbutils/version.py:/Users/maxwell-coyle/.local/bin/garmindb_cli.py 1...1...0
+INFO:/Users/maxwell-coyle/.local/pipx/venvs/garmindb/lib/python3.11/site-packages/garmindb/plugin_manager.py:Loading GarminDb plugins from ./data/Plugins
+INFO:/Users/maxwell-coyle/.local/pipx/venvs/garmindb/lib/python3.11/site-packages/idbutils/plugin.py:Loading plugins from ./data/Plugins
+INFO:root:Enabled statistics: [<Statistics.monitoring: 1>, <Statistics.steps: 2>, <Statistics.itime: 3>, <Statistics.sleep: 4>, <Statistics.rhr: 5>, <Statistics.weight: 6>, <Statistics.activities: 7>]
+INFO:/Users/maxwell-coyle/.local/bin/garmindb_cli.py:___Downloading All Data___
+INFO:root:load session from /Users/maxwell-coyle/dev/garmen_local/data/tokens/garth_session
+INFO:root:login: Max (f81a06f2-a406-4ac5-8551-f05a737db9b4)
+INFO:root:Fetching 1000 activities to ./data/FitFiles/Activities
+INFO:root:get_activity_types: './data/FitFiles/Activities'
+INFO:/Users/maxwell-coyle/.local/pipx/venvs/garmindb/lib/python3.11/site-packages/garmindb/download.py:Getting activities: './data/FitFiles/Activities' (1000) temp /var/folders/p5/7m5dsqwn0s94_rth_q70bf680000gn/T/tmpmnz1k28l
+INFO:root:get_activity_summaries
+INFO:root:get_activities: Taylorsville Running (21047138169)
+INFO:root:get_activities: skipping download of 21047138169, already present
+INFO:root:get_activities: Taylorsville Running (21026386799)
+INFO:root:get_activities: skipping download of 21026386799, already present
+INFO:root:get_activities: Salt Lake County Running (21008077990)
+INFO:root:get_activities: skipping download of 21008077990, already present
+INFO:root:get_activities: Salt Lake City Running (20982494090)
+INFO:root:get_activities: skipping download of 20982494090, already present
+INFO:root:get_activities: Murray Running (20961336909)
+INFO:root:get_activities: skipping download of 20961336909, already present
+INFO:root:get_activities: Goblin Valley Half Marathon  (20942473839)
+INFO:root:get_activities: skipping download of 20942473839, already present
+INFO:root:get_activities: Taylorsville Running (20891460528)
+INFO:root:get_activities: skipping download of 20891460528, already present
+INFO:root:get_activities: Taylorsville Running (20835031668)
+INFO:root:get_activities: skipping download of 20835031668, already present
+INFO:root:get_activities: Salt Lake County Running (20805569538)
+INFO:root:get_activities: skipping download of 20805569538, already present
+INFO:root:get_activities: Murray Running (20768808870)
+INFO:root:get_activities: skipping download of 20768808870, already present
+INFO:root:get_activities: Salt Lake County Running (20739190997)
+INFO:root:get_activities: skipping download of 20739190997, already present
+INFO:root:get_activities: Taylorsville Running (20720078103)
+INFO:root:get_activities: skipping download of 20720078103, already present
+INFO:root:get_activities: Taylorsville Running (20690252509)
+INFO:root:get_activities: skipping download of 20690252509, already present
+INFO:root:get_activities: Salt Lake County Running (20669047117)
+INFO:root:get_activities: skipping download of 20669047117, already present
+INFO:root:get_activities: Taylorsville Running (20650517769)
+INFO:root:get_activities: skipping download of 20650517769, already present
+INFO:root:get_activities: Taylorsville Running (20617464024)
+INFO:root:get_activities: skipping download of 20617464024, already present
+INFO:root:get_activities: Taylorsville Running (20600211095)
+INFO:root:get_activities: skipping download of 20600211095, already present
+INFO:root:get_activities: Taylorsville Running (20563160531)
+INFO:root:get_activities: skipping download of 20563160531, already present
+INFO:root:get_activities: Taylorsville Running (20539894753)
+INFO:root:get_activities: skipping download of 20539894753, already present
+INFO:root:get_activities: Taylorsville Running (20510990198)
+INFO:root:get_activities: skipping download of 20510990198, already present
+INFO:root:get_activities: Taylorsville Running (20439587539)
+INFO:root:get_activities: skipping download of 20439587539, already present
+INFO:root:get_activities: Taylorsville Running (20352866898)
+INFO:root:get_activities: skipping download of 20352866898, already present
+INFO:root:get_activities: Taylorsville Running (20346733697)
+INFO:root:get_activities: skipping download of 20346733697, already present
+INFO:root:get_activities: Tooele Running (20026462839)
+INFO:root:get_activities: skipping download of 20026462839, already present
+INFO:root:get_activities: Tooele run (19987829582)
+INFO:root:get_activities: skipping download of 19987829582, already present
+INFO:root:get_activities: Tooele Running (19953973934)
+INFO:root:get_activities: skipping download of 19953973934, already present
+INFO:root:get_activities: Tooele Running (19912158132)
+INFO:root:get_activities: skipping download of 19912158132, already present
+INFO:root:get_activities: Tooele Running (19879703292)
+INFO:root:get_activities: skipping download of 19879703292, already present
+INFO:root:get_activities: Tooele Running (19849795395)
+INFO:root:get_activities: skipping download of 19849795395, already present
+INFO:root:get_activities: Tooele Running (19794592561)
+INFO:root:get_activities: skipping download of 19794592561, already present
+INFO:root:get_activities: Salt Lake City Running (19711483120)
+INFO:root:get_activities: skipping download of 19711483120, already present
+INFO:root:get_activities: Tooele Running (19679483276)
+INFO:root:get_activities: skipping download of 19679483276, already present
+INFO:root:get_activities: Tooele Running (19657810446)
+INFO:root:get_activities: skipping download of 19657810446, already present
+INFO:root:get_activities: Cardio (19641713512)
+INFO:root:get_activities: skipping download of 19641713512, already present
+INFO:root:get_activities: Tooele Running (19623606603)
+INFO:root:get_activities: skipping download of 19623606603, already present
+INFO:root:get_activities: Tooele Running (19620223101)
+INFO:root:get_activities: skipping download of 19620223101, already present
+INFO:root:get_activities: Tooele Running (19609924213)
+INFO:root:get_activities: skipping download of 19609924213, already present
+INFO:root:get_activities: Edgewood Running (19384173707)
+INFO:root:get_activities: skipping download of 19384173707, already present
+INFO:root:get_activities: Edgewood Running (19321362667)
+INFO:root:get_activities: skipping download of 19321362667, already present
+INFO:root:get_activities: Edgewood Running (19302850859)
+INFO:root:get_activities: skipping download of 19302850859, already present
+INFO:root:get_activities: Running (18762244219)
+INFO:root:get_activities: skipping download of 18762244219, already present
+INFO:root:get_activities: Running (18762243797)
+INFO:root:get_activities: skipping download of 18762243797, already present
+INFO:root:get_activities: Edgewood Running (18631589082)
+INFO:root:get_activities: skipping download of 18631589082, already present
+INFO:root:get_activities: Edgewood Running (18248651137)
+INFO:root:get_activities: skipping download of 18248651137, already present
+INFO:root:get_activities: Lago Argentino Walking (18037671718)
+INFO:root:get_activities: skipping download of 18037671718, already present
+INFO:root:get_activities: Lago Argentino Walking (18021912879)
+INFO:root:get_activities: skipping download of 18021912879, already present
+INFO:root:get_activities: Edgewood Running (17968792296)
+INFO:root:get_activities: skipping download of 17968792296, already present
+INFO:root:get_activities: Running (17683466624)
+INFO:root:get_activities: skipping download of 17683466624, already present
+INFO:root:get_activities: Edgewood Running (17591292041)
+INFO:root:get_activities: skipping download of 17591292041, already present
+INFO:root:get_activities: Edgewood Running (17545941019)
+INFO:root:get_activities: skipping download of 17545941019, already present
+INFO:root:get_activities: Edgewood - 2 Mile Tempo (17529119604)
+INFO:root:get_activities: skipping download of 17529119604, already present
+INFO:root:get_activities: Edgewood Running (17505506276)
+INFO:root:get_activities: skipping download of 17505506276, already present
+INFO:root:get_activities: Edgewood Running (17482359651)
+INFO:root:get_activities: skipping download of 17482359651, already present
+INFO:root:get_activities: Wilkinsburg Running (17481830413)
+INFO:root:get_activities: skipping download of 17481830413, already present
+INFO:root:get_activities: Edgewood Running (17481829203)
+INFO:root:get_activities: skipping download of 17481829203, already present
+INFO:root:get_activities: Edgewood Running (17392467003)
+INFO:root:get_activities: skipping download of 17392467003, already present
+INFO:root:get_activities: Edgewood Running (17368739805)
+INFO:root:get_activities: skipping download of 17368739805, already present
+INFO:root:get_activities: Edgewood Running (17360848672)
+INFO:root:get_activities: skipping download of 17360848672, already present
+INFO:root:get_activities: Edgewood Running (17352877156)
+INFO:root:get_activities: skipping download of 17352877156, already present
+INFO:root:get_activities: Edgewood Running (17306430317)
+INFO:root:get_activities: skipping download of 17306430317, already present
+INFO:root:get_activities: Edgewood Running (17289336694)
+INFO:root:get_activities: skipping download of 17289336694, already present
+INFO:root:get_activities: Edgewood Running (17289335366)
+INFO:root:get_activities: skipping download of 17289335366, already present
+INFO:root:get_activities: Edgewood Running (17220423658)
+INFO:root:get_activities: skipping download of 17220423658, already present
+INFO:root:get_activities: Edgewood Running (17183813890)
+INFO:root:get_activities: skipping download of 17183813890, already present
+INFO:root:get_activities: Edgewood Running (17122768699)
+INFO:root:get_activities: skipping download of 17122768699, already present
+INFO:root:get_activities: Wilkinsburg Running (16826276105)
+INFO:root:get_activities: skipping download of 16826276105, already present
+INFO:root:get_activities: Wilkinsburg Running (16737609744)
+INFO:root:get_activities: skipping download of 16737609744, already present
+INFO:root:get_activities: Running (14521919551)
+INFO:root:get_activities: skipping download of 14521919551, already present
+INFO:root:get_activities: Wilkinsburg Running (13861233381)
+INFO:root:get_activities: skipping download of 13861233381, already present
+INFO:root:get_activities: Wilkinsburg Running (13781150055)
+INFO:root:get_activities: skipping download of 13781150055, already present
+INFO:root:get_activities: Wilkinsburg Running (13115125886)
+INFO:root:get_activities: skipping download of 13115125886, already present
+INFO:root:get_activities: Wilkinsburg Running (13103879659)
+INFO:root:get_activities: skipping download of 13103879659, already present
+INFO:root:get_activities: Pittsburgh Running (12736051141)
+INFO:root:get_activities: skipping download of 12736051141, already present
+INFO:root:get_activities: Wilkinsburg Running (12736050780)
+INFO:root:get_activities: skipping download of 12736050780, already present
+INFO:root:get_activities: Pittsburgh Running (12610878383)
+INFO:root:get_activities: skipping download of 12610878383, already present
+INFO:root:get_activities: Wilkinsburg Running (12610876839)
+INFO:root:get_activities: skipping download of 12610876839, already present
+INFO:root:get_activities: Wilkinsburg Running (12571894570)
+INFO:root:get_activities: skipping download of 12571894570, already present
+INFO:root:get_activities: Pittsburgh Running (12454328077)
+INFO:root:get_activities: skipping download of 12454328077, already present
+INFO:root:get_activities: Wilkinsburg Running (12454041825)
+INFO:root:get_activities: skipping download of 12454041825, already present
+INFO:root:get_activities: Edgewood Running (12453806231)
+INFO:root:get_activities: skipping download of 12453806231, already present
+INFO:root:get_activities: Wilkinsburg Running (12357337979)
+INFO:root:get_activities: skipping download of 12357337979, already present
+INFO:root:get_activities: Wilkinsburg Running (12274221557)
+INFO:root:get_activities: skipping download of 12274221557, already present
+INFO:root:get_activities: Wilkinsburg Running (12101705284)
+INFO:root:get_activities: skipping download of 12101705284, already present
+INFO:root:get_activities: Pittsburgh Running (11804423155)
+INFO:root:get_activities: skipping download of 11804423155, already present
+INFO:root:get_activities: Pittsburgh Running (11785382473)
+INFO:root:get_activities: skipping download of 11785382473, already present
+INFO:root:get_activities: Pittsburgh Running (11751073369)
+INFO:root:get_activities: skipping download of 11751073369, already present
+INFO:root:get_activities: Pittsburgh Running (11733981814)
+INFO:root:get_activities: skipping download of 11733981814, already present
+INFO:root:get_activities: Pittsburgh Running (11697589988)
+INFO:root:get_activities: skipping download of 11697589988, already present
+INFO:root:get_activities: Pittsburgh Running (11653595036)
+INFO:root:get_activities: skipping download of 11653595036, already present
+INFO:root:get_activities: Pittsburgh Running (11632590728)
+INFO:root:get_activities: skipping download of 11632590728, already present
+INFO:root:get_activities: Pittsburgh Running (11611292876)
+INFO:root:get_activities: skipping download of 11611292876, already present
+INFO:root:get_activities: Pittsburgh Running (11596099353)
+INFO:root:get_activities: skipping download of 11596099353, already present
+INFO:root:get_activities: Pittsburgh Running (11547120857)
+INFO:root:get_activities: skipping download of 11547120857, already present
+INFO:root:get_activities: Pittsburgh Running (11078166500)
+INFO:root:get_activities: skipping download of 11078166500, already present
+INFO:root:get_activities: Pittsburgh Running (10775483291)
+INFO:root:get_activities: skipping download of 10775483291, already present
+INFO:root:get_activities: Pittsburgh Running (10537173095)
+INFO:root:get_activities: skipping download of 10537173095, already present
+INFO:root:get_activities: Pittsburgh Running (10482065575)
+INFO:root:get_activities: skipping download of 10482065575, already present
+INFO:root:get_activities: Pittsburgh Running (10479087960)
+INFO:root:get_activities: skipping download of 10479087960, already present
+INFO:root:get_activities: Pittsburgh Running (10342138568)
+INFO:root:get_activities: skipping download of 10342138568, already present
+INFO:root:get_activities: Pittsburgh Running (9909356423)
+INFO:root:get_activities: skipping download of 9909356423, already present
+INFO:root:get_activities: McCandless Running (9887876066)
+INFO:root:get_activities: skipping download of 9887876066, already present
+INFO:root:get_activities: Pittsburgh - 4.5 Mile Run (9778777155)
+INFO:root:get_activities: skipping download of 9778777155, already present
+INFO:root:get_activities: Pittsburgh Running (9766104361)
+INFO:root:get_activities: skipping download of 9766104361, already present
+INFO:root:get_activities: Pittsburgh Running (9741167887)
+INFO:root:get_activities: skipping download of 9741167887, already present
+INFO:root:get_activities: Pittsburgh Running (9722268977)
+INFO:root:get_activities: skipping download of 9722268977, already present
+INFO:root:get_activities: Pittsburgh Running (9698521617)
+INFO:root:get_activities: skipping download of 9698521617, already present
+INFO:root:get_activities: Pittsburgh Running (9681391466)
+INFO:root:get_activities: skipping download of 9681391466, already present
+INFO:root:get_activities: Pittsburgh Running (9637895007)
+INFO:root:get_activities: skipping download of 9637895007, already present
+INFO:root:get_activities: McCandless Running (9630633355)
+INFO:root:get_activities: skipping download of 9630633355, already present
+INFO:root:get_activities: Pittsburgh Running (9593330926)
+INFO:root:get_activities: skipping download of 9593330926, already present
+INFO:root:get_activities: Pittsburgh Running (9562302851)
+INFO:root:get_activities: skipping download of 9562302851, already present
+INFO:root:get_activities: Denver Running (9502550425)
+INFO:root:get_activities: skipping download of 9502550425, already present
+INFO:root:get_activities: Denver Running (9477459260)
+INFO:root:get_activities: skipping download of 9477459260, already present
+INFO:root:get_activities: Denver Running (9470508051)
+INFO:root:get_activities: skipping download of 9470508051, already present
+INFO:root:get_activities: Denver Running (9410084741)
+INFO:root:get_activities: skipping download of 9410084741, already present
+INFO:root:get_activities: Denver Running (9397108075)
+INFO:root:get_activities: skipping download of 9397108075, already present
+INFO:root:get_activities: Denver Running (9390755458)
+INFO:root:get_activities: skipping download of 9390755458, already present
+INFO:root:get_activities: Denver Running (9333013724)
+INFO:root:get_activities: skipping download of 9333013724, already present
+INFO:root:get_activities: Denver Running (9278436273)
+INFO:root:get_activities: skipping download of 9278436273, already present
+INFO:root:get_activities: Denver Running (9227851080)
+INFO:root:get_activities: skipping download of 9227851080, already present
+INFO:root:get_activities: Denver Running (9185446619)
+INFO:root:get_activities: skipping download of 9185446619, already present
+INFO:root:get_activities: Denver Running (9079381250)
+INFO:root:get_activities: skipping download of 9079381250, already present
+INFO:root:get_activities: Denver - Benchmark Run (9053662337)
+INFO:root:get_activities: skipping download of 9053662337, already present
+INFO:root:get_activities: Pittsburgh Running (8736764914)
+INFO:root:get_activities: skipping download of 8736764914, already present
+INFO:root:get_activities: Pittsburgh Running (8700099211)
+INFO:root:get_activities: skipping download of 8700099211, already present
+INFO:root:get_activities: Pittsburgh Running (8639404981)
+INFO:root:get_activities: skipping download of 8639404981, already present
+INFO:root:get_activities: Pittsburgh Running (8593277787)
+INFO:root:get_activities: skipping download of 8593277787, already present
+INFO:root:get_activities: Pittsburgh Running (8581401550)
+INFO:root:get_activities: skipping download of 8581401550, already present
+INFO:root:get_activities: Pittsburgh Running (8498200451)
+INFO:root:get_activities: skipping download of 8498200451, already present
+INFO:root:get_activities: Pittsburgh Running (8465387484)
+INFO:root:get_activities: skipping download of 8465387484, already present
+INFO:root:get_activities: Pittsburgh Running (8433788815)
+INFO:root:get_activities: skipping download of 8433788815, already present
+INFO:root:get_activities: Pittsburgh Running (8416947298)
+INFO:root:get_activities: skipping download of 8416947298, already present
+INFO:root:get_activities: Pittsburgh Running (8352374024)
+INFO:root:get_activities: skipping download of 8352374024, already present
+INFO:root:get_activities: Pittsburgh Running (8331335008)
+INFO:root:get_activities: skipping download of 8331335008, already present
+INFO:root:get_activities: Bogota, D.C. Running (8279291850)
+INFO:root:get_activities: skipping download of 8279291850, already present
+INFO:root:get_activities: Pittsburgh Running (8237785497)
+INFO:root:get_activities: skipping download of 8237785497, already present
+INFO:root:unzip_files: from /var/folders/p5/7m5dsqwn0s94_rth_q70bf680000gn/T/tmpmnz1k28l to ./data/FitFiles/Activities

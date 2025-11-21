@@ -1,0 +1,10 @@
+# GarminDB configuration file
+obase_dir: ./data/db
+tokenstore: ./data/tokens
+database: maxwell.henderson.sqlite
+activities: true
+monitoring: true
+sleep: true
+rhr: true
+weight: false
+

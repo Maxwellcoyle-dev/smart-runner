@@ -1,0 +1,45 @@
+{
+  "db": {
+    "type": "sqlite"
+  },
+  "garmin": {
+    "domain": "garmin.com"
+  },
+  "credentials": {
+    "user": "maxwellc.henderson@gmail.com",
+    "secure_password": false,
+    "password": "ApRd5t&uvMCTnqA",
+    "password_file": null
+  },
+  "data": {
+    "download_latest_activities": 25,
+    "download_all_activities": 1000
+  },
+  "directories": {
+    "relative_to_home": false,
+    "base_dir": "./data"
+  },
+  "enabled_stats": {
+    "monitoring": true,
+    "steps": true,
+    "itime": true,
+    "sleep": true,
+    "rhr": true,
+    "weight": true,
+    "activities": true
+  },
+  "course_views": {
+    "steps": []
+  },
+  "modes": {},
+  "activities": {
+    "display": []
+  },
+  "settings": {
+    "metric": false,
+    "default_display_activities": ["walking", "running", "cycling"]
+  },
+  "checkup": {
+    "look_back_days": 90
+  }
+}
