@@ -14,7 +14,15 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: `${process.env.BACKEND_URL || process.env.FRONTEND_URL?.replace(':3001', ':3000') || 'http://localhost:3000'}/api/auth/google/callback`,
+        callbackURL: `${
+          process.env.BACKEND_URL ||
+          (process.env.FRONTEND_URL
+            ? process.env.FRONTEND_URL.replace(":3001", ":3000").replace(
+                "3001",
+                "3000"
+              )
+            : "http://localhost:3000")
+        }/api/auth/google/callback`,
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
@@ -45,10 +53,10 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
           if (user) {
             // User exists but doesn't have Google ID linked, link it
-            await query(
-              "UPDATE users SET google_id = $1 WHERE id = $2",
-              [googleId, user.id]
-            );
+            await query("UPDATE users SET google_id = $1 WHERE id = $2", [
+              googleId,
+              user.id,
+            ]);
             user.google_id = googleId;
             return done(null, user);
           }
@@ -93,9 +101,9 @@ router.post("/register", async (req, res) => {
     // Validate JWT_SECRET is set
     if (!process.env.JWT_SECRET) {
       console.error("JWT_SECRET is not set!");
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: "Server configuration error",
-        message: "JWT_SECRET not configured"
+        message: "JWT_SECRET not configured",
       });
     }
 
@@ -119,10 +127,9 @@ router.post("/register", async (req, res) => {
     }
 
     // Check if user already exists
-    const existingUser = await getOne(
-      "SELECT id FROM users WHERE email = $1",
-      [email.toLowerCase().trim()]
-    );
+    const existingUser = await getOne("SELECT id FROM users WHERE email = $1", [
+      email.toLowerCase().trim(),
+    ]);
 
     if (existingUser) {
       return res.status(409).json({ error: "User already exists" });
@@ -159,11 +166,11 @@ router.post("/register", async (req, res) => {
   } catch (error) {
     console.error("Registration error:", error);
     console.error("Error stack:", error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Registration failed",
       message: error.message,
       // Only include details in development
-      ...(process.env.NODE_ENV === "development" && { details: error.stack })
+      ...(process.env.NODE_ENV === "development" && { details: error.stack }),
     });
   }
 });
@@ -174,9 +181,9 @@ router.post("/login", async (req, res) => {
     // Validate JWT_SECRET is set
     if (!process.env.JWT_SECRET) {
       console.error("JWT_SECRET is not set!");
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: "Server configuration error",
-        message: "JWT_SECRET not configured"
+        message: "JWT_SECRET not configured",
       });
     }
 
@@ -188,13 +195,22 @@ router.post("/login", async (req, res) => {
 
     // Find user
     const user = await getOne(
-      "SELECT id, email, password_hash, subscription_tier FROM users WHERE email = $1",
+      "SELECT id, email, password_hash, google_id, subscription_tier FROM users WHERE email = $1",
       [email.toLowerCase().trim()]
     );
 
     if (!user) {
       // Don't reveal if user exists or not (security best practice)
       return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    // Check if user signed up with Google (no password)
+    if (!user.password_hash) {
+      return res.status(401).json({
+        error: "Invalid credentials",
+        message:
+          "This account was created with Google. Please sign in with Google.",
+      });
     }
 
     // Verify password
@@ -223,11 +239,11 @@ router.post("/login", async (req, res) => {
   } catch (error) {
     console.error("Login error:", error);
     console.error("Error stack:", error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Login failed",
       message: error.message,
       // Only include details in development
-      ...(process.env.NODE_ENV === "development" && { details: error.stack })
+      ...(process.env.NODE_ENV === "development" && { details: error.stack }),
     });
   }
 });
@@ -278,5 +294,62 @@ router.post("/logout", async (req, res) => {
   res.json({ success: true, message: "Logged out successfully" });
 });
 
-module.exports = router;
+// Google OAuth routes
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  // Initiate Google OAuth flow
+  router.get(
+    "/google",
+    passport.authenticate("google", {
+      scope: ["profile", "email"],
+    })
+  );
 
+  // Google OAuth callback
+  router.get(
+    "/google/callback",
+    passport.authenticate("google", { session: false }),
+    async (req, res) => {
+      try {
+        if (!req.user) {
+          return res.redirect(
+            `${
+              process.env.FRONTEND_URL || "http://localhost:3001"
+            }/login?error=google_auth_failed`
+          );
+        }
+
+        // Generate JWT token
+        const token = jwt.sign(
+          { id: req.user.id, email: req.user.email },
+          process.env.JWT_SECRET,
+          { expiresIn: "7d" }
+        );
+
+        // Redirect to frontend with token
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3001";
+        res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
+      } catch (error) {
+        console.error("Google OAuth callback error:", error);
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3001";
+        res.redirect(`${frontendUrl}/login?error=google_auth_failed`);
+      }
+    }
+  );
+} else {
+  // If Google OAuth is not configured, return error
+  router.get("/google", (req, res) => {
+    res.status(503).json({
+      error: "Google OAuth not configured",
+      message: "Google sign-in is not available. Please contact support.",
+    });
+  });
+
+  router.get("/google/callback", (req, res) => {
+    res.status(503).json({
+      error: "Google OAuth not configured",
+      message: "Google sign-in is not available. Please contact support.",
+    });
+  });
+}
+
+module.exports = router;

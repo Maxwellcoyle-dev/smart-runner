@@ -29,4 +29,3 @@ The Dockerfile installs garmindb in the virtual environment, so we need to use t
 ## After Updating
 
 Railway will auto-redeploy. Then try syncing again - it should work!
-

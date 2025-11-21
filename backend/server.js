@@ -5,6 +5,8 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const passport = require("passport");
+const session = require("express-session");
 const path = require("path");
 const fs = require("fs-extra");
 const sqlite3 = require("sqlite3").verbose();
@@ -62,6 +64,27 @@ app.use("/api/auth/", authLimiter);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// Session configuration for Passport (minimal, since we use JWT)
+app.use(
+  session({
+    secret:
+      process.env.SESSION_SECRET ||
+      process.env.JWT_SECRET ||
+      "default-secret-change-in-production",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  })
+);
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Paths
 const DATA_DIR = path.join(__dirname, "../data");
 const MONITORING_DIR = path.join(DATA_DIR, "FitFiles/Monitoring");
@@ -72,8 +95,10 @@ const SYNC_STATE_FILE = path.join(__dirname, ".sync_state.json");
 // Default garmindb paths
 // In Docker/production: uses virtual environment at /opt/garmindb-venv
 // In local development: can override via environment variables
-const GARMINDB_PYTHON = process.env.GARMINDB_PYTHON || "/opt/garmindb-venv/bin/python";
-const GARMINDB_CLI = process.env.GARMINDB_CLI || "/opt/garmindb-venv/bin/garmindb_cli.py";
+const GARMINDB_PYTHON =
+  process.env.GARMINDB_PYTHON || "/opt/garmindb-venv/bin/python";
+const GARMINDB_CLI =
+  process.env.GARMINDB_CLI || "/opt/garmindb-venv/bin/garmindb_cli.py";
 
 // Database connections
 let db = null;
@@ -281,206 +306,221 @@ app.get("/api/daily-summaries", authenticateToken, async (req, res) => {
 });
 
 // Get aggregated daily summary stats
-app.get("/api/daily-summaries/aggregated", authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { startDate, endDate, groupBy } = req.query;
+app.get(
+  "/api/daily-summaries/aggregated",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { startDate, endDate, groupBy } = req.query;
 
-    const { getDailySummariesByUser } = require("./utils/dataQueries");
-    let summaries = await getDailySummariesByUser(userId, {
-      startDate,
-      endDate,
-    });
+      const { getDailySummariesByUser } = require("./utils/dataQueries");
+      let summaries = await getDailySummariesByUser(userId, {
+        startDate,
+        endDate,
+      });
 
-    // Filter by date range
-    if (startDate) {
-      summaries = summaries.filter((s) => s.calendarDate >= startDate);
+      // Filter by date range
+      if (startDate) {
+        summaries = summaries.filter((s) => s.calendarDate >= startDate);
+      }
+      if (endDate) {
+        summaries = summaries.filter((s) => s.calendarDate <= endDate);
+      }
+
+      // Aggregate based on groupBy parameter
+      const groupByParam = groupBy || "day";
+
+      if (groupByParam === "week") {
+        // Group by week
+        const weekly = {};
+        summaries.forEach((summary) => {
+          const date = new Date(summary.calendarDate);
+          const weekStart = new Date(date);
+          weekStart.setDate(date.getDate() - date.getDay());
+          const weekKey = weekStart.toISOString().split("T")[0];
+
+          if (!weekly[weekKey]) {
+            weekly[weekKey] = {
+              weekStart: weekKey,
+              totalSteps: 0,
+              totalDistance: 0,
+              totalCalories: 0,
+              avgRestingHeartRate: [],
+              avgStressLevel: [],
+              avgBodyBattery: [],
+              days: 0,
+            };
+          }
+
+          weekly[weekKey].totalSteps += summary.totalSteps || 0;
+          weekly[weekKey].totalDistance +=
+            (summary.totalDistanceMeters || 0) / 1000; // Convert to km
+          weekly[weekKey].totalCalories += summary.totalKilocalories || 0;
+          if (summary.restingHeartRate)
+            weekly[weekKey].avgRestingHeartRate.push(summary.restingHeartRate);
+          if (summary.averageStressLevel)
+            weekly[weekKey].avgStressLevel.push(summary.averageStressLevel);
+          if (summary.bodyBatteryHighestValue)
+            weekly[weekKey].avgBodyBattery.push(
+              summary.bodyBatteryHighestValue
+            );
+          weekly[weekKey].days++;
+        });
+
+        // Calculate averages
+        Object.keys(weekly).forEach((key) => {
+          const week = weekly[key];
+          week.avgRestingHeartRate =
+            week.avgRestingHeartRate.length > 0
+              ? week.avgRestingHeartRate.reduce((a, b) => a + b, 0) /
+                week.avgRestingHeartRate.length
+              : null;
+          week.avgStressLevel =
+            week.avgStressLevel.length > 0
+              ? week.avgStressLevel.reduce((a, b) => a + b, 0) /
+                week.avgStressLevel.length
+              : null;
+          week.avgBodyBattery =
+            week.avgBodyBattery.length > 0
+              ? week.avgBodyBattery.reduce((a, b) => a + b, 0) /
+                week.avgBodyBattery.length
+              : null;
+        });
+
+        res.json({
+          groupBy: "week",
+          count: Object.keys(weekly).length,
+          data: Object.values(weekly),
+        });
+      } else if (groupByParam === "month") {
+        // Group by month
+        const monthly = {};
+        summaries.forEach((summary) => {
+          const date = new Date(summary.calendarDate);
+          const monthKey = `${date.getFullYear()}-${String(
+            date.getMonth() + 1
+          ).padStart(2, "0")}`;
+
+          if (!monthly[monthKey]) {
+            monthly[monthKey] = {
+              month: monthKey,
+              totalSteps: 0,
+              totalDistance: 0,
+              totalCalories: 0,
+              avgRestingHeartRate: [],
+              avgStressLevel: [],
+              avgBodyBattery: [],
+              days: 0,
+            };
+          }
+
+          monthly[monthKey].totalSteps += summary.totalSteps || 0;
+          monthly[monthKey].totalDistance +=
+            (summary.totalDistanceMeters || 0) / 1000;
+          monthly[monthKey].totalCalories += summary.totalKilocalories || 0;
+          if (summary.restingHeartRate)
+            monthly[monthKey].avgRestingHeartRate.push(
+              summary.restingHeartRate
+            );
+          if (summary.averageStressLevel)
+            monthly[monthKey].avgStressLevel.push(summary.averageStressLevel);
+          if (summary.bodyBatteryHighestValue)
+            monthly[monthKey].avgBodyBattery.push(
+              summary.bodyBatteryHighestValue
+            );
+          monthly[monthKey].days++;
+        });
+
+        // Calculate averages
+        Object.keys(monthly).forEach((key) => {
+          const month = monthly[key];
+          month.avgRestingHeartRate =
+            month.avgRestingHeartRate.length > 0
+              ? month.avgRestingHeartRate.reduce((a, b) => a + b, 0) /
+                month.avgRestingHeartRate.length
+              : null;
+          month.avgStressLevel =
+            month.avgStressLevel.length > 0
+              ? month.avgStressLevel.reduce((a, b) => a + b, 0) /
+                month.avgStressLevel.length
+              : null;
+          month.avgBodyBattery =
+            month.avgBodyBattery.length > 0
+              ? month.avgBodyBattery.reduce((a, b) => a + b, 0) /
+                month.avgBodyBattery.length
+              : null;
+        });
+
+        res.json({
+          groupBy: "month",
+          count: Object.keys(monthly).length,
+          data: Object.values(monthly),
+        });
+      } else {
+        // Overall aggregation
+        const aggregated = {
+          totalDays: summaries.length,
+          totalSteps: summaries.reduce(
+            (sum, s) => sum + (s.totalSteps || 0),
+            0
+          ),
+          totalDistance:
+            summaries.reduce(
+              (sum, s) => sum + (s.totalDistanceMeters || 0),
+              0
+            ) / 1000, // km
+          totalCalories: summaries.reduce(
+            (sum, s) => sum + (s.totalKilocalories || 0),
+            0
+          ),
+          avgSteps: 0,
+          avgDistance: 0,
+          avgCalories: 0,
+          avgRestingHeartRate: 0,
+          avgStressLevel: 0,
+          avgBodyBattery: 0,
+        };
+
+        const restingHR = summaries
+          .filter((s) => s.restingHeartRate)
+          .map((s) => s.restingHeartRate);
+        const stressLevels = summaries
+          .filter((s) => s.averageStressLevel)
+          .map((s) => s.averageStressLevel);
+        const bodyBattery = summaries
+          .filter((s) => s.bodyBatteryHighestValue)
+          .map((s) => s.bodyBatteryHighestValue);
+
+        aggregated.avgSteps = aggregated.totalSteps / aggregated.totalDays;
+        aggregated.avgDistance =
+          aggregated.totalDistance / aggregated.totalDays;
+        aggregated.avgCalories =
+          aggregated.totalCalories / aggregated.totalDays;
+        aggregated.avgRestingHeartRate =
+          restingHR.length > 0
+            ? restingHR.reduce((a, b) => a + b, 0) / restingHR.length
+            : null;
+        aggregated.avgStressLevel =
+          stressLevels.length > 0
+            ? stressLevels.reduce((a, b) => a + b, 0) / stressLevels.length
+            : null;
+        aggregated.avgBodyBattery =
+          bodyBattery.length > 0
+            ? bodyBattery.reduce((a, b) => a + b, 0) / bodyBattery.length
+            : null;
+
+        res.json({
+          groupBy: "overall",
+          data: aggregated,
+        });
+      }
+    } catch (error) {
+      console.error("Error aggregating daily summaries:", error);
+      res.status(500).json({ error: "Failed to aggregate daily summaries" });
     }
-    if (endDate) {
-      summaries = summaries.filter((s) => s.calendarDate <= endDate);
-    }
-
-    // Aggregate based on groupBy parameter
-    const groupByParam = groupBy || "day";
-
-    if (groupByParam === "week") {
-      // Group by week
-      const weekly = {};
-      summaries.forEach((summary) => {
-        const date = new Date(summary.calendarDate);
-        const weekStart = new Date(date);
-        weekStart.setDate(date.getDate() - date.getDay());
-        const weekKey = weekStart.toISOString().split("T")[0];
-
-        if (!weekly[weekKey]) {
-          weekly[weekKey] = {
-            weekStart: weekKey,
-            totalSteps: 0,
-            totalDistance: 0,
-            totalCalories: 0,
-            avgRestingHeartRate: [],
-            avgStressLevel: [],
-            avgBodyBattery: [],
-            days: 0,
-          };
-        }
-
-        weekly[weekKey].totalSteps += summary.totalSteps || 0;
-        weekly[weekKey].totalDistance +=
-          (summary.totalDistanceMeters || 0) / 1000; // Convert to km
-        weekly[weekKey].totalCalories += summary.totalKilocalories || 0;
-        if (summary.restingHeartRate)
-          weekly[weekKey].avgRestingHeartRate.push(summary.restingHeartRate);
-        if (summary.averageStressLevel)
-          weekly[weekKey].avgStressLevel.push(summary.averageStressLevel);
-        if (summary.bodyBatteryHighestValue)
-          weekly[weekKey].avgBodyBattery.push(summary.bodyBatteryHighestValue);
-        weekly[weekKey].days++;
-      });
-
-      // Calculate averages
-      Object.keys(weekly).forEach((key) => {
-        const week = weekly[key];
-        week.avgRestingHeartRate =
-          week.avgRestingHeartRate.length > 0
-            ? week.avgRestingHeartRate.reduce((a, b) => a + b, 0) /
-              week.avgRestingHeartRate.length
-            : null;
-        week.avgStressLevel =
-          week.avgStressLevel.length > 0
-            ? week.avgStressLevel.reduce((a, b) => a + b, 0) /
-              week.avgStressLevel.length
-            : null;
-        week.avgBodyBattery =
-          week.avgBodyBattery.length > 0
-            ? week.avgBodyBattery.reduce((a, b) => a + b, 0) /
-              week.avgBodyBattery.length
-            : null;
-      });
-
-      res.json({
-        groupBy: "week",
-        count: Object.keys(weekly).length,
-        data: Object.values(weekly),
-      });
-    } else if (groupByParam === "month") {
-      // Group by month
-      const monthly = {};
-      summaries.forEach((summary) => {
-        const date = new Date(summary.calendarDate);
-        const monthKey = `${date.getFullYear()}-${String(
-          date.getMonth() + 1
-        ).padStart(2, "0")}`;
-
-        if (!monthly[monthKey]) {
-          monthly[monthKey] = {
-            month: monthKey,
-            totalSteps: 0,
-            totalDistance: 0,
-            totalCalories: 0,
-            avgRestingHeartRate: [],
-            avgStressLevel: [],
-            avgBodyBattery: [],
-            days: 0,
-          };
-        }
-
-        monthly[monthKey].totalSteps += summary.totalSteps || 0;
-        monthly[monthKey].totalDistance +=
-          (summary.totalDistanceMeters || 0) / 1000;
-        monthly[monthKey].totalCalories += summary.totalKilocalories || 0;
-        if (summary.restingHeartRate)
-          monthly[monthKey].avgRestingHeartRate.push(summary.restingHeartRate);
-        if (summary.averageStressLevel)
-          monthly[monthKey].avgStressLevel.push(summary.averageStressLevel);
-        if (summary.bodyBatteryHighestValue)
-          monthly[monthKey].avgBodyBattery.push(
-            summary.bodyBatteryHighestValue
-          );
-        monthly[monthKey].days++;
-      });
-
-      // Calculate averages
-      Object.keys(monthly).forEach((key) => {
-        const month = monthly[key];
-        month.avgRestingHeartRate =
-          month.avgRestingHeartRate.length > 0
-            ? month.avgRestingHeartRate.reduce((a, b) => a + b, 0) /
-              month.avgRestingHeartRate.length
-            : null;
-        month.avgStressLevel =
-          month.avgStressLevel.length > 0
-            ? month.avgStressLevel.reduce((a, b) => a + b, 0) /
-              month.avgStressLevel.length
-            : null;
-        month.avgBodyBattery =
-          month.avgBodyBattery.length > 0
-            ? month.avgBodyBattery.reduce((a, b) => a + b, 0) /
-              month.avgBodyBattery.length
-            : null;
-      });
-
-      res.json({
-        groupBy: "month",
-        count: Object.keys(monthly).length,
-        data: Object.values(monthly),
-      });
-    } else {
-      // Overall aggregation
-      const aggregated = {
-        totalDays: summaries.length,
-        totalSteps: summaries.reduce((sum, s) => sum + (s.totalSteps || 0), 0),
-        totalDistance:
-          summaries.reduce((sum, s) => sum + (s.totalDistanceMeters || 0), 0) /
-          1000, // km
-        totalCalories: summaries.reduce(
-          (sum, s) => sum + (s.totalKilocalories || 0),
-          0
-        ),
-        avgSteps: 0,
-        avgDistance: 0,
-        avgCalories: 0,
-        avgRestingHeartRate: 0,
-        avgStressLevel: 0,
-        avgBodyBattery: 0,
-      };
-
-      const restingHR = summaries
-        .filter((s) => s.restingHeartRate)
-        .map((s) => s.restingHeartRate);
-      const stressLevels = summaries
-        .filter((s) => s.averageStressLevel)
-        .map((s) => s.averageStressLevel);
-      const bodyBattery = summaries
-        .filter((s) => s.bodyBatteryHighestValue)
-        .map((s) => s.bodyBatteryHighestValue);
-
-      aggregated.avgSteps = aggregated.totalSteps / aggregated.totalDays;
-      aggregated.avgDistance = aggregated.totalDistance / aggregated.totalDays;
-      aggregated.avgCalories = aggregated.totalCalories / aggregated.totalDays;
-      aggregated.avgRestingHeartRate =
-        restingHR.length > 0
-          ? restingHR.reduce((a, b) => a + b, 0) / restingHR.length
-          : null;
-      aggregated.avgStressLevel =
-        stressLevels.length > 0
-          ? stressLevels.reduce((a, b) => a + b, 0) / stressLevels.length
-          : null;
-      aggregated.avgBodyBattery =
-        bodyBattery.length > 0
-          ? bodyBattery.reduce((a, b) => a + b, 0) / bodyBattery.length
-          : null;
-
-      res.json({
-        groupBy: "overall",
-        data: aggregated,
-      });
-    }
-  } catch (error) {
-    console.error("Error aggregating daily summaries:", error);
-    res.status(500).json({ error: "Failed to aggregate daily summaries" });
   }
-});
+);
 
 // Get activities
 app.get("/api/activities", authenticateToken, async (req, res) => {
@@ -584,52 +624,54 @@ app.get("/api/activities/:id/splits", authenticateToken, async (req, res) => {
     let splits = [];
 
     if (await fs.pathExists(fitFilePath)) {
-        // Use Python script to extract splits from FIT file
-        const scriptPath = path.join(__dirname, "extract_splits.py");
-        const command = `"${GARMINDB_PYTHON}" "${scriptPath}" "${fitFilePath}" ${splitDistance}`;
+      // Use Python script to extract splits from FIT file
+      const scriptPath = path.join(__dirname, "extract_splits.py");
+      const command = `"${GARMINDB_PYTHON}" "${scriptPath}" "${fitFilePath}" ${splitDistance}`;
 
-        try {
-          const result = await execAsync(command, {
-            maxBuffer: 10 * 1024 * 1024, // 10MB buffer
-            timeout: 30000, // 30 second timeout
-            cwd: __dirname,
-          });
+      try {
+        const result = await execAsync(command, {
+          maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+          timeout: 30000, // 30 second timeout
+          cwd: __dirname,
+        });
 
-          const output = result.stdout || "";
-          if (!output || output.trim() === "") {
-            console.error("Python script returned empty output");
-          } else {
-            try {
-              const splitData = JSON.parse(output);
-              if (splitData.splits && splitData.splits.length > 0) {
-                splits = splitData.splits;
-                console.log(
-                  `Extracted ${splits.length} splits from FIT file for activity ${id}`
-                );
-              } else if (splitData.error) {
-                console.error("Python script error:", splitData.error);
-              }
-            } catch (parseError) {
-              console.error(
-                "Failed to parse Python script output:",
-                parseError.message,
-                output.substring(0, 200)
+        const output = result.stdout || "";
+        if (!output || output.trim() === "") {
+          console.error("Python script returned empty output");
+        } else {
+          try {
+            const splitData = JSON.parse(output);
+            if (splitData.splits && splitData.splits.length > 0) {
+              splits = splitData.splits;
+              console.log(
+                `Extracted ${splits.length} splits from FIT file for activity ${id}`
               );
+            } else if (splitData.error) {
+              console.error("Python script error:", splitData.error);
             }
+          } catch (parseError) {
+            console.error(
+              "Failed to parse Python script output:",
+              parseError.message,
+              output.substring(0, 200)
+            );
           }
-        } catch (execError) {
-          console.error(
-            "Error extracting splits from FIT file:",
-            execError.message,
-            execError.stdout,
-            execError.stderr
-          );
-          // Fall back to calculating from activity_records if FIT extraction fails
         }
-      } else {
-        // FIT file not found in user's directory
-        console.log(`FIT file not found for activity ${id} in user ${userId}'s directory`);
+      } catch (execError) {
+        console.error(
+          "Error extracting splits from FIT file:",
+          execError.message,
+          execError.stdout,
+          execError.stderr
+        );
+        // Fall back to calculating from activity_records if FIT extraction fails
       }
+    } else {
+      // FIT file not found in user's directory
+      console.log(
+        `FIT file not found for activity ${id} in user ${userId}'s directory`
+      );
+    }
 
     if (splits.length === 0) {
       return res
@@ -930,7 +972,8 @@ app.post("/api/sync", authenticateToken, async (req, res) => {
       return res.status(400).json({
         success: false,
         error: "Garmin account not connected",
-        message: "Please connect your Garmin account in settings before syncing",
+        message:
+          "Please connect your Garmin account in settings before syncing",
       });
     }
 
@@ -952,7 +995,7 @@ app.post("/api/sync", authenticateToken, async (req, res) => {
       // Fallback to file-based sync state for migration
       const syncState = await loadSyncState();
       lastSyncDate = syncState.lastSyncDate;
-      
+
       // If still no date, get from user's existing data
       if (!lastSyncDate) {
         lastSyncDate = await getMostRecentDateForUser(userId);
@@ -967,7 +1010,11 @@ app.post("/api/sync", authenticateToken, async (req, res) => {
     }
 
     // Create user-specific data directory
-    const workDir = path.join(process.env.DATA_DIR || path.join(__dirname, "..", "data"), "users", userId);
+    const workDir = path.join(
+      process.env.DATA_DIR || path.join(__dirname, "..", "data"),
+      "users",
+      userId
+    );
     await fs.ensureDir(workDir);
     const configDir = path.join(workDir, "tokens");
     await fs.ensureDir(configDir);
@@ -1009,20 +1056,24 @@ app.post("/api/sync", authenticateToken, async (req, res) => {
     // Check if garmindb is available
     const garmindbPython = GARMINDB_PYTHON;
     const garmindbCli = GARMINDB_CLI;
-    
+
     // Log the paths being used for debugging
     console.log(`[SYNC] Using garmindb Python: ${garmindbPython}`);
     console.log(`[SYNC] Using garmindb CLI: ${garmindbCli}`);
-    console.log(`[SYNC] GARMINDB_PYTHON env: ${process.env.GARMINDB_PYTHON || 'not set'}`);
-    console.log(`[SYNC] GARMINDB_CLI env: ${process.env.GARMINDB_CLI || 'not set'}`);
-    
+    console.log(
+      `[SYNC] GARMINDB_PYTHON env: ${process.env.GARMINDB_PYTHON || "not set"}`
+    );
+    console.log(
+      `[SYNC] GARMINDB_CLI env: ${process.env.GARMINDB_CLI || "not set"}`
+    );
+
     // Check if Python exists (required)
     const pythonExists = await fs.pathExists(garmindbPython).catch(() => false);
     console.log(`[SYNC] Python exists at ${garmindbPython}: ${pythonExists}`);
-    
+
     // Check if CLI exists (optional - we can use module approach)
     const cliExists = await fs.pathExists(garmindbCli).catch(() => false);
-    
+
     if (!pythonExists) {
       // Update sync log to failed
       if (syncLogId) {
@@ -1035,7 +1086,8 @@ app.post("/api/sync", authenticateToken, async (req, res) => {
       return res.status(503).json({
         success: false,
         error: "Sync feature unavailable",
-        message: "Python is not available. The sync feature requires Python and garmindb to be installed on the server. Please contact support or check deployment documentation.",
+        message:
+          "Python is not available. The sync feature requires Python and garmindb to be installed on the server. Please contact support or check deployment documentation.",
         garmindbPython,
         pythonExists,
       });
@@ -1045,7 +1097,7 @@ app.post("/api/sync", authenticateToken, async (req, res) => {
     // Try using garmindb as a Python module first (more reliable)
     // Use -A for all stats, -d for download, -i for import, --analyze for analysis
     // Use -f to specify the config directory (garmindb looks for GarminConnectConfig.json in that dir)
-    
+
     // Try module approach first: python3 -m garmindb
     // If that doesn't work, fall back to direct CLI path
     let command;
@@ -1093,10 +1145,7 @@ app.post("/api/sync", authenticateToken, async (req, res) => {
         if (syncLogId) {
           await query(
             "UPDATE sync_logs SET status = 'failed', completed_at = NOW(), error_message = $1 WHERE id = $2",
-            [
-              `Garmin sync command failed (exit code ${exitCode})`,
-              syncLogId,
-            ]
+            [`Garmin sync command failed (exit code ${exitCode})`, syncLogId]
           ).catch(() => {});
         }
 
@@ -1116,7 +1165,7 @@ app.post("/api/sync", authenticateToken, async (req, res) => {
 
     // Process synced data and store in database
     const { processSyncedData } = require("./utils/dataProcessing");
-    
+
     console.log("Processing synced data into database...");
     const processingResult = await processSyncedData(userId, workDir);
     console.log(

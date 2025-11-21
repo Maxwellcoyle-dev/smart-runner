@@ -95,11 +95,33 @@ export const AuthProvider = ({ children }) => {
     }).catch(console.error);
   };
 
+  const handleGoogleCallback = async (token) => {
+    try {
+      // Store token
+      setToken(token);
+      localStorage.setItem("token", token);
+
+      // Fetch user info
+      const data = await apiFetch("/auth/me");
+      if (data.user) {
+        setUser(data.user);
+        return { success: true };
+      } else {
+        throw new Error("Failed to get user information");
+      }
+    } catch (error) {
+      localStorage.removeItem("token");
+      setToken(null);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     login,
     register,
     logout,
+    handleGoogleCallback,
     loading,
     isAuthenticated: !!user,
   };
