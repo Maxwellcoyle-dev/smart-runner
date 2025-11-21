@@ -69,10 +69,11 @@ const ACTIVITIES_DIR = path.join(DATA_DIR, "FitFiles/Activities");
 const DB_PATH = path.join(DATA_DIR, "DBs/garmin_monitoring.db");
 const ACTIVITIES_DB_PATH = path.join(DATA_DIR, "DBs/garmin_activities.db");
 const SYNC_STATE_FILE = path.join(__dirname, ".sync_state.json");
-// Default garmindb paths (for local development)
-// In production, these should be set via environment variables
-const GARMINDB_PYTHON = process.env.GARMINDB_PYTHON || "/usr/bin/python3";
-const GARMINDB_CLI = process.env.GARMINDB_CLI || "/usr/local/bin/garmindb_cli.py";
+// Default garmindb paths
+// In Docker/production: uses virtual environment at /opt/garmindb-venv
+// In local development: can override via environment variables
+const GARMINDB_PYTHON = process.env.GARMINDB_PYTHON || "/opt/garmindb-venv/bin/python";
+const GARMINDB_CLI = process.env.GARMINDB_CLI || "/opt/garmindb-venv/bin/garmindb_cli.py";
 
 // Database connections
 let db = null;

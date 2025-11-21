@@ -53,8 +53,9 @@ async function testGarminConnection(email, password) {
     await fs.writeFile(configPath, JSON.stringify(testConfig, null, 2));
 
     // Check if garmindb is available
-    const garmindbPython = process.env.GARMINDB_PYTHON || "/usr/bin/python3";
-    const garmindbCli = process.env.GARMINDB_CLI || "/usr/local/bin/garmindb_cli.py";
+    // In Docker/production: uses virtual environment at /opt/garmindb-venv
+    const garmindbPython = process.env.GARMINDB_PYTHON || "/opt/garmindb-venv/bin/python";
+    const garmindbCli = process.env.GARMINDB_CLI || "/opt/garmindb-venv/bin/garmindb_cli.py";
     
     // Check if Python exists (required)
     const pythonExists = await fs.pathExists(garmindbPython).catch(() => false);
