@@ -69,9 +69,10 @@ const ACTIVITIES_DIR = path.join(DATA_DIR, "FitFiles/Activities");
 const DB_PATH = path.join(DATA_DIR, "DBs/garmin_monitoring.db");
 const ACTIVITIES_DB_PATH = path.join(DATA_DIR, "DBs/garmin_activities.db");
 const SYNC_STATE_FILE = path.join(__dirname, ".sync_state.json");
-const GARMINDB_PYTHON =
-  "/Users/maxwell-coyle/.local/pipx/venvs/garmindb/bin/python";
-const GARMINDB_CLI = "/Users/maxwell-coyle/.local/bin/garmindb_cli.py";
+// Default garmindb paths (for local development)
+// In production, these should be set via environment variables
+const GARMINDB_PYTHON = process.env.GARMINDB_PYTHON || "/usr/bin/python3";
+const GARMINDB_CLI = process.env.GARMINDB_CLI || "/usr/local/bin/garmindb_cli.py";
 
 // Database connections
 let db = null;
@@ -1005,14 +1006,16 @@ app.post("/api/sync", authenticateToken, async (req, res) => {
     );
 
     // Check if garmindb is available
-    const garmindbPython = process.env.GARMINDB_PYTHON || GARMINDB_PYTHON;
-    const garmindbCli = process.env.GARMINDB_CLI || GARMINDB_CLI;
+    const garmindbPython = GARMINDB_PYTHON;
+    const garmindbCli = GARMINDB_CLI;
     
-    // Check if garmindb files exist
+    // Check if Python exists (required)
     const pythonExists = await fs.pathExists(garmindbPython).catch(() => false);
+    
+    // Check if CLI exists (optional - we can use module approach)
     const cliExists = await fs.pathExists(garmindbCli).catch(() => false);
     
-    if (!pythonExists || !cliExists) {
+    if (!pythonExists) {
       // Update sync log to failed
       if (syncLogId) {
         await query(
@@ -1024,18 +1027,27 @@ app.post("/api/sync", authenticateToken, async (req, res) => {
       return res.status(503).json({
         success: false,
         error: "Sync feature unavailable",
-        message: "garmindb is not installed. The sync feature requires garmindb to be installed on the server. Please contact support or check deployment documentation.",
+        message: "Python is not available. The sync feature requires Python and garmindb to be installed on the server. Please contact support or check deployment documentation.",
         garmindbPython,
-        garmindbCli,
         pythonExists,
-        cliExists,
       });
     }
 
     // Build garmindb command
+    // Try using garmindb as a Python module first (more reliable)
     // Use -A for all stats, -d for download, -i for import, --analyze for analysis
     // Use -f to specify the config directory (garmindb looks for GarminConnectConfig.json in that dir)
-    const command = `cd "${workDir}" && "${garmindbPython}" "${garmindbCli}" -f "${configDir}" -A -d -i --analyze`;
+    
+    // Try module approach first: python3 -m garmindb
+    // If that doesn't work, fall back to direct CLI path
+    let command;
+    if (await fs.pathExists(garmindbCli)) {
+      // Use direct CLI path if it exists
+      command = `cd "${workDir}" && "${garmindbPython}" "${garmindbCli}" -f "${configDir}" -A -d -i --analyze`;
+    } else {
+      // Try as Python module
+      command = `cd "${workDir}" && "${garmindbPython}" -m garmindb -f "${configDir}" -A -d -i --analyze`;
+    }
 
     console.log("Starting Garmin data sync...");
     const startTime = Date.now();

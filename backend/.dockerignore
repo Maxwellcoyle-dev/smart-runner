@@ -3,7 +3,13 @@ npm-debug.log
 .env
 .env.local
 .DS_Store
-data/
+data/users/
+data/DBs/
+data/FitFiles/
 *.log
 .sync_state.json
+.git
+.gitignore
+README.md
+*.md
 

@@ -56,11 +56,13 @@ async function testGarminConnection(email, password) {
     const garmindbPython = process.env.GARMINDB_PYTHON || "/usr/bin/python3";
     const garmindbCli = process.env.GARMINDB_CLI || "/usr/local/bin/garmindb_cli.py";
     
-    // Check if garmindb files exist
+    // Check if Python exists (required)
     const pythonExists = await fs.pathExists(garmindbPython).catch(() => false);
+    
+    // Check if CLI exists (optional - we can use module approach)
     const cliExists = await fs.pathExists(garmindbCli).catch(() => false);
     
-    if (!pythonExists || !cliExists) {
+    if (!pythonExists) {
       // If garmindb isn't available, skip credential testing
       // Credentials will be tested on first sync
       await fs.remove(tempDir).catch(() => {});
@@ -73,7 +75,13 @@ async function testGarminConnection(email, password) {
 
     // Try to run garmindb with test credentials
     const workDir = tempDir;
-    const command = `cd "${workDir}" && "${garmindbPython}" "${garmindbCli}" -f "${path.dirname(configPath)}" -A -d --no-import --no-analyze 2>&1 | head -20`;
+    // Try module approach first, fall back to CLI path
+    let command;
+    if (await fs.pathExists(garmindbCli)) {
+      command = `cd "${workDir}" && "${garmindbPython}" "${garmindbCli}" -f "${path.dirname(configPath)}" -A -d --no-import --no-analyze 2>&1 | head -20`;
+    } else {
+      command = `cd "${workDir}" && "${garmindbPython}" -m garmindb -f "${path.dirname(configPath)}" -A -d --no-import --no-analyze 2>&1 | head -20`;
+    }
 
     try {
       const result = await execAsync(command, {
