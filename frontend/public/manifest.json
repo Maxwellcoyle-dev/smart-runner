@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Smart Runner",
+  "name": "Smart Runner",
+  "description": "Visualize and understand your running training and progress using Garmin data or self-reported activities. AI analysis and coaching coming soon.",
   "icons": [
     {
       "src": "favicon.ico",

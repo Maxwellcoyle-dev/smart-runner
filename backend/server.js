@@ -1346,6 +1346,20 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// Debug endpoint to check OAuth configuration (remove in production if needed)
+app.get("/api/auth/config-check", (req, res) => {
+  res.json({
+    hasGoogleClientId: !!process.env.GOOGLE_CLIENT_ID,
+    hasGoogleClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+    backendUrl: process.env.BACKEND_URL || "not set",
+    frontendUrl: process.env.FRONTEND_URL || "not set",
+    // Don't expose actual secrets, just whether they exist
+    googleOAuthConfigured: !!(
+      process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+    ),
+  });
+});
+
 // Start server
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Garmin API server running on port ${PORT}`);

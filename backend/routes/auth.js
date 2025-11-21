@@ -307,15 +307,36 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   // Google OAuth callback
   router.get(
     "/google/callback",
-    passport.authenticate("google", { session: false }),
+    passport.authenticate("google", {
+      session: false,
+      failureRedirect: "/api/auth/google/failure",
+    }),
     async (req, res) => {
       try {
         if (!req.user) {
-          return res.redirect(
-            `${
-              process.env.FRONTEND_URL || "http://localhost:3001"
-            }/login?error=google_auth_failed`
+          console.error("Google OAuth callback: No user in request");
+          const frontendUrl =
+            process.env.FRONTEND_URL || "http://localhost:3001";
+          return res.redirect(`${frontendUrl}/login?error=google_auth_failed`);
+        }
+
+        // Validate JWT_SECRET is set
+        if (!process.env.JWT_SECRET) {
+          console.error("JWT_SECRET is not set in Google OAuth callback!");
+          const frontendUrl =
+            process.env.FRONTEND_URL || "http://localhost:3001";
+          return res.redirect(`${frontendUrl}/login?error=server_config_error`);
+        }
+
+        // Validate user has required fields
+        if (!req.user.id || !req.user.email) {
+          console.error(
+            "Google OAuth callback: User missing required fields",
+            req.user
           );
+          const frontendUrl =
+            process.env.FRONTEND_URL || "http://localhost:3001";
+          return res.redirect(`${frontendUrl}/login?error=user_data_invalid`);
         }
 
         // Generate JWT token
@@ -327,14 +348,29 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
         // Redirect to frontend with token
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3001";
+        console.log(
+          `Google OAuth success: Redirecting to ${frontendUrl}/auth/callback`
+        );
         res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
       } catch (error) {
         console.error("Google OAuth callback error:", error);
+        console.error("Error stack:", error.stack);
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3001";
-        res.redirect(`${frontendUrl}/login?error=google_auth_failed`);
+        res.redirect(
+          `${frontendUrl}/login?error=google_auth_failed&message=${encodeURIComponent(
+            error.message
+          )}`
+        );
       }
     }
   );
+
+  // Failure route for Google OAuth
+  router.get("/google/failure", (req, res) => {
+    console.error("Google OAuth failure route hit");
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3001";
+    res.redirect(`${frontendUrl}/login?error=google_auth_failed`);
+  });
 } else {
   // If Google OAuth is not configured, return error
   router.get("/google", (req, res) => {
