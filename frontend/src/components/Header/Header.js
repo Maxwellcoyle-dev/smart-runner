@@ -5,7 +5,7 @@ const Header = ({ syncStatus, onSettingsClick, onRefresh, syncing, loading, user
   return (
     <header className="header">
       <div>
-        <h1>🏃 Training Dashboard</h1>
+        <h1>Smart Runner</h1>
         {syncStatus && (
           <p className="sync-info">
             Last sync:{" "}

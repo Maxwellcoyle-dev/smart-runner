@@ -1,0 +1,26 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="#667eea" stroke="#764ba2" stroke-width="4"/>
+  
+  <!-- Runner silhouette -->
+  <g transform="translate(256, 256)">
+    <!-- Head -->
+    <circle cx="0" cy="-120" r="35" fill="#ffffff"/>
+    
+    <!-- Body -->
+    <ellipse cx="0" cy="-30" rx="25" ry="60" fill="#ffffff"/>
+    
+    <!-- Left leg (forward) -->
+    <path d="M -15 -30 L -25 40 L -35 50 L -30 60" stroke="#ffffff" stroke-width="20" stroke-linecap="round" fill="none"/>
+    
+    <!-- Right leg (back) -->
+    <path d="M 15 -30 L 20 30 L 25 40 L 20 50" stroke="#ffffff" stroke-width="20" stroke-linecap="round" fill="none"/>
+    
+    <!-- Left arm (back) -->
+    <path d="M -25 -50 L -50 -80 L -55 -90" stroke="#ffffff" stroke-width="18" stroke-linecap="round" fill="none"/>
+    
+    <!-- Right arm (forward) -->
+    <path d="M 25 -50 L 45 -70 L 50 -75" stroke="#ffffff" stroke-width="18" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>
+

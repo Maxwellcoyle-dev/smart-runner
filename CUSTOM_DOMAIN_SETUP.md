@@ -85,9 +85,11 @@ Add the DNS records Railway provides (usually a CNAME):
 ### 3.2 Update Authorized Redirect URIs
 
 Under **Authorized redirect URIs**, add:
+
 ```
 https://api.smart-runner.cyberfoxai.com/api/auth/google/callback
 ```
+
 (Keep your existing localhost entry for local development)
 
 ### 3.3 Save Changes
@@ -173,6 +175,7 @@ Click **Save** at the bottom of the page.
 **Backend URL**: `https://api.smart-runner.cyberfoxai.com`
 
 **Google OAuth Settings**:
+
 - Authorized JavaScript origins:
   - `http://localhost:3000` (local dev)
   - `https://smart-runner.cyberfoxai.com` (production)
@@ -182,6 +185,7 @@ Click **Save** at the bottom of the page.
   - `https://api.smart-runner.cyberfoxai.com/api/auth/google/callback` (production)
 
 **Railway Variables**:
+
 ```env
 BACKEND_URL=https://api.smart-runner.cyberfoxai.com
 FRONTEND_URL=https://smart-runner.cyberfoxai.com
@@ -189,7 +193,7 @@ ALLOWED_ORIGINS=https://smart-runner.cyberfoxai.com,https://api.smart-runner.cyb
 ```
 
 **Vercel Variables**:
+
 ```env
 REACT_APP_API_URL=https://api.smart-runner.cyberfoxai.com
 ```
-
