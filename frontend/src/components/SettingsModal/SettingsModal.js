@@ -15,6 +15,7 @@ const SettingsModal = ({ settings, onSettingsChange, onClose }) => {
   const [garminConnecting, setGarminConnecting] = useState(false);
   const [garminError, setGarminError] = useState("");
   const [garminSuccess, setGarminSuccess] = useState("");
+  const [isEditingCredentials, setIsEditingCredentials] = useState(false);
 
   useEffect(() => {
     fetchGarminStatus();
@@ -51,6 +52,7 @@ const SettingsModal = ({ settings, onSettingsChange, onClose }) => {
         setGarminSuccess(result.message || "Garmin account connected successfully!");
         setGarminEmail("");
         setGarminPassword("");
+        setIsEditingCredentials(false);
         await fetchGarminStatus();
       } else {
         setGarminError(result.error || "Failed to connect Garmin account");
@@ -109,32 +111,78 @@ const SettingsModal = ({ settings, onSettingsChange, onClose }) => {
                   )}
                 </div>
                 <form onSubmit={handleConnectGarmin} className="garmin-form">
-                  <div className="form-group">
-                    <label>Update Garmin Email</label>
-                    <input
-                      type="email"
-                      value={garminEmail}
-                      onChange={(e) => setGarminEmail(e.target.value)}
-                      placeholder="Garmin email"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Update Garmin Password</label>
-                    <input
-                      type="password"
-                      value={garminPassword}
-                      onChange={(e) => setGarminPassword(e.target.value)}
-                      placeholder="Garmin password"
-                    />
-                  </div>
-                  {(garminEmail || garminPassword) && (
-                    <button
-                      type="submit"
-                      disabled={garminConnecting}
-                      className="garmin-button"
-                    >
-                      {garminConnecting ? "Updating..." : "Update Credentials"}
-                    </button>
+                  {!isEditingCredentials ? (
+                    <>
+                      <div className="form-group">
+                        <label>Garmin Email</label>
+                        <div className="garmin-credential-display">
+                          {garminStatus.email || "***@***"}
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>Garmin Password</label>
+                        <div className="garmin-credential-display">
+                          ********
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingCredentials(true)}
+                        className="garmin-button"
+                      >
+                        Update Credentials
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="form-group">
+                        <label>Update Garmin Email</label>
+                        <input
+                          type="email"
+                          value={garminEmail}
+                          onChange={(e) => setGarminEmail(e.target.value)}
+                          placeholder={garminStatus.email || "Garmin email"}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Update Garmin Password</label>
+                        <input
+                          type="password"
+                          value={garminPassword}
+                          onChange={(e) => setGarminPassword(e.target.value)}
+                          placeholder="Enter new password"
+                        />
+                      </div>
+                      <div style={{ display: "flex", gap: "10px" }}>
+                        <button
+                          type="submit"
+                          disabled={garminConnecting || (!garminEmail && !garminPassword)}
+                          className="garmin-button"
+                        >
+                          {garminConnecting ? "Updating..." : "Save Changes"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsEditingCredentials(false);
+                            setGarminEmail("");
+                            setGarminPassword("");
+                            setGarminError("");
+                            setGarminSuccess("");
+                          }}
+                          className="garmin-button"
+                          style={{ background: "#6b7280" }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  {garminError && (
+                    <div className="garmin-error">{garminError}</div>
+                  )}
+                  {garminSuccess && (
+                    <div className="garmin-success">{garminSuccess}</div>
                   )}
                   <button
                     type="button"

@@ -8,7 +8,7 @@ INFO:root:load session from /Users/maxwell-coyle/dev/garmen_local/data/tokens/ga
 INFO:root:login: Max (f81a06f2-a406-4ac5-8551-f05a737db9b4)
 INFO:root:Fetching 1000 activities to ./data/FitFiles/Activities
 INFO:root:get_activity_types: './data/FitFiles/Activities'
-INFO:/Users/maxwell-coyle/.local/pipx/venvs/garmindb/lib/python3.11/site-packages/garmindb/download.py:Getting activities: './data/FitFiles/Activities' (1000) temp /var/folders/p5/7m5dsqwn0s94_rth_q70bf680000gn/T/tmpmnz1k28l
+INFO:/Users/maxwell-coyle/.local/pipx/venvs/garmindb/lib/python3.11/site-packages/garmindb/download.py:Getting activities: './data/FitFiles/Activities' (1000) temp /var/folders/p5/7m5dsqwn0s94_rth_q70bf680000gn/T/tmpaszywxp0
 INFO:root:get_activity_summaries
 INFO:root:get_activities: Taylorsville Running (21047138169)
 INFO:root:get_activities: skipping download of 21047138169, already present
@@ -282,4 +282,4 @@ INFO:root:get_activities: Bogota, D.C. Running (8279291850)
 INFO:root:get_activities: skipping download of 8279291850, already present
 INFO:root:get_activities: Pittsburgh Running (8237785497)
 INFO:root:get_activities: skipping download of 8237785497, already present
-INFO:root:unzip_files: from /var/folders/p5/7m5dsqwn0s94_rth_q70bf680000gn/T/tmpmnz1k28l to ./data/FitFiles/Activities
+INFO:root:unzip_files: from /var/folders/p5/7m5dsqwn0s94_rth_q70bf680000gn/T/tmpaszywxp0 to ./data/FitFiles/Activities

@@ -214,6 +214,19 @@ router.post("/connect", authenticateToken, async (req, res) => {
 });
 
 /**
+ * Mask email for display (e.g., "user@example.com" -> "u***@example.com")
+ */
+function maskEmail(email) {
+  if (!email) return "";
+  const [localPart, domain] = email.split("@");
+  if (!domain) return email; // Invalid email format
+  if (localPart.length <= 2) {
+    return `${localPart[0]}***@${domain}`;
+  }
+  return `${localPart[0]}***@${domain}`;
+}
+
+/**
  * Get Garmin connection status
  * GET /api/garmin/status
  */
@@ -222,7 +235,7 @@ router.get("/status", authenticateToken, async (req, res) => {
     const userId = req.user.id;
 
     const creds = await getOne(
-      `SELECT id, last_sync, created_at, updated_at 
+      `SELECT id, encrypted_email, encrypted_password, last_sync, created_at, updated_at 
        FROM garmin_credentials 
        WHERE user_id = $1`,
       [userId]
@@ -235,8 +248,19 @@ router.get("/status", authenticateToken, async (req, res) => {
       });
     }
 
+    // Decrypt and mask email for display
+    let maskedEmail = "";
+    try {
+      const decryptedEmail = decrypt(creds.encrypted_email);
+      maskedEmail = maskEmail(decryptedEmail);
+    } catch (error) {
+      console.error("Error decrypting email:", error);
+      maskedEmail = "***@***";
+    }
+
     res.json({
       connected: true,
+      email: maskedEmail,
       last_sync: creds.last_sync,
       connected_at: creds.created_at,
       updated_at: creds.updated_at,

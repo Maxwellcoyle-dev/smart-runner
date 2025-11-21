@@ -1,9 +1,91 @@
-// Authentication routes: register, login, logout
+// Authentication routes: register, login, logout, Google OAuth
 const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const { query, getOne } = require("../config/database");
 const router = express.Router();
+
+// Configure Google OAuth Strategy
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: `${process.env.BACKEND_URL || process.env.FRONTEND_URL?.replace(':3001', ':3000') || 'http://localhost:3000'}/api/auth/google/callback`,
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          const googleId = profile.id;
+          const email = profile.emails?.[0]?.value?.toLowerCase().trim();
+          const displayName = profile.displayName;
+
+          if (!email) {
+            return done(new Error("No email found in Google profile"), null);
+          }
+
+          // Check if user exists with this Google ID
+          let user = await getOne(
+            "SELECT id, email, google_id, subscription_tier FROM users WHERE google_id = $1",
+            [googleId]
+          );
+
+          if (user) {
+            // User exists with Google ID, return user
+            return done(null, user);
+          }
+
+          // Check if user exists with this email (might have signed up with email/password)
+          user = await getOne(
+            "SELECT id, email, google_id, subscription_tier FROM users WHERE email = $1",
+            [email]
+          );
+
+          if (user) {
+            // User exists but doesn't have Google ID linked, link it
+            await query(
+              "UPDATE users SET google_id = $1 WHERE id = $2",
+              [googleId, user.id]
+            );
+            user.google_id = googleId;
+            return done(null, user);
+          }
+
+          // New user, create account
+          const result = await query(
+            "INSERT INTO users (email, google_id, password_hash) VALUES ($1, $2, NULL) RETURNING id, email, google_id, subscription_tier",
+            [email, googleId]
+          );
+
+          user = result.rows[0];
+          return done(null, user);
+        } catch (error) {
+          console.error("Google OAuth error:", error);
+          return done(error, null);
+        }
+      }
+    )
+  );
+
+  // Serialize user for session (we're using JWT, so this is minimal)
+  passport.serializeUser((user, done) => {
+    done(null, user.id);
+  });
+
+  passport.deserializeUser(async (id, done) => {
+    try {
+      const user = await getOne(
+        "SELECT id, email, google_id, subscription_tier FROM users WHERE id = $1",
+        [id]
+      );
+      done(null, user);
+    } catch (error) {
+      done(error, null);
+    }
+  });
+}
 
 // Register new user
 router.post("/register", async (req, res) => {
