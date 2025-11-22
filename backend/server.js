@@ -604,8 +604,60 @@ app.get("/api/activities/:id/splits", authenticateToken, async (req, res) => {
     }
 
     // Query splits from database first (if we have a splits table)
-    // For now, we'll extract from FIT file in user's directory
+    // Try SQLite database first if available
+    let splits = [];
     const splitDistance = unit === "miles" ? 1609.34 : 1000; // meters
+
+    try {
+      const activitiesDb = getActivitiesDb();
+      if (activitiesDb) {
+        const dbSplits = await new Promise((resolve, reject) => {
+          activitiesDb.all(
+            `SELECT * FROM activity_splits WHERE activity_id = ? ORDER BY split_number`,
+            [id],
+            (err, rows) => {
+              if (err) {
+                // Table might not exist, that's okay
+                console.log(`[SPLITS] No splits table or error querying: ${err.message}`);
+                resolve([]);
+              } else {
+                resolve(rows || []);
+              }
+            }
+          );
+        });
+
+        if (dbSplits && dbSplits.length > 0) {
+          console.log(`[SPLITS] Found ${dbSplits.length} splits in database`);
+          // Filter by split distance if the table has that column, otherwise use all
+          splits = dbSplits
+            .filter((row) => {
+              // If split_distance column exists, filter by it
+              if (row.split_distance !== undefined) {
+                return Math.abs(row.split_distance - splitDistance) < 1; // Within 1 meter
+              }
+              // Otherwise, assume all splits match (legacy data)
+              return true;
+            })
+            .map((row) => ({
+              split: row.split_number || row.split,
+              distance: row.distance || splitDistance, // Use splitDistance if not in row
+              elapsed_time: row.elapsed_time,
+              moving_time: row.moving_time || row.elapsed_time,
+              avg_speed: row.avg_speed,
+              max_speed: row.max_speed,
+              avg_hr: row.avg_hr,
+              max_hr: row.max_hr,
+              avg_cadence: row.avg_cadence,
+              max_cadence: row.max_cadence,
+              ascent: row.ascent,
+              descent: row.descent,
+            }));
+        }
+      }
+    } catch (dbError) {
+      console.log(`[SPLITS] Database query failed, trying FIT file: ${dbError.message}`);
+    }
 
     // Find the FIT file for this activity in user's directory
     const userDataDir = path.join(
@@ -624,7 +676,15 @@ app.get("/api/activities/:id/splits", authenticateToken, async (req, res) => {
     console.log(`[SPLITS] Looking for FIT file: ${fitFilePath}`);
     console.log(`[SPLITS] User ID: ${userId}, Activity ID: ${id}, Unit: ${unit}, Split Distance: ${splitDistance}m`);
 
-    let splits = [];
+    // If we already have splits from database, skip FIT extraction
+    if (splits.length > 0) {
+      return res.json({
+        activityId: id,
+        count: splits.length,
+        unit: unit || "km",
+        data: splits,
+      });
+    }
 
     if (await fs.pathExists(fitFilePath)) {
       console.log(`[SPLITS] FIT file found, extracting splits...`);
@@ -732,17 +792,34 @@ app.get("/api/activities/:id/splits", authenticateToken, async (req, res) => {
     }
 
     if (splits.length === 0) {
+      // List available FIT files for debugging
+      const activitiesDir = path.join(userDataDir, "FitFiles", "Activities");
+      let availableFiles = [];
+      try {
+        if (await fs.pathExists(activitiesDir)) {
+          const files = await fs.readdir(activitiesDir);
+          availableFiles = files.filter(f => f.endsWith('.fit')).slice(0, 10); // First 10 FIT files
+        }
+      } catch (listError) {
+        console.error(`[SPLITS] Error listing files: ${listError.message}`);
+      }
+
       return res.status(404).json({ 
         error: "No splits found for this activity",
+        message: "Splits could not be extracted. The FIT file may not exist or the extraction failed.",
         details: {
           activityId: id,
           userId: userId,
           unit: unit || "km",
           fitFilePath: fitFilePath,
           fitFileExists: await fs.pathExists(fitFilePath),
+          activitiesDir: activitiesDir,
+          activitiesDirExists: await fs.pathExists(activitiesDir),
+          availableFitFiles: availableFiles,
           scriptPath: path.join(__dirname, "extract_splits.py"),
           scriptExists: await fs.pathExists(path.join(__dirname, "extract_splits.py")),
           pythonPath: GARMINDB_PYTHON,
+          dataDir: process.env.DATA_DIR || path.join(__dirname, "..", "data"),
         }
       });
     }
