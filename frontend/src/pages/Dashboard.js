@@ -59,6 +59,8 @@ function Dashboard() {
     checkShouldShow,
     completeOnboarding,
     dismissOnboarding,
+    resetOnboarding,
+    forceShowOnboarding,
   } = useOnboarding();
 
   const handleRefresh = useCallback(async () => {
@@ -143,6 +145,10 @@ function Dashboard() {
     setTimeout(checkGarminStatus, 1000);
   };
 
+  const handleShowOnboarding = () => {
+    forceShowOnboarding();
+  };
+
   return (
     <div className="App">
       <div className="container">
@@ -180,6 +186,7 @@ function Dashboard() {
             settings={settings}
             onSettingsChange={setSettings}
             onClose={handleSettingsClose}
+            onShowOnboarding={handleShowOnboarding}
           />
         )}
 

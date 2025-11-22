@@ -7,7 +7,7 @@ import {
   disconnectGarmin,
 } from "../../services/garminService";
 
-const SettingsModal = ({ settings, onSettingsChange, onClose }) => {
+const SettingsModal = ({ settings, onSettingsChange, onClose, onShowOnboarding }) => {
   const [garminStatus, setGarminStatus] = useState(null);
   const [garminLoading, setGarminLoading] = useState(true);
   const [garminEmail, setGarminEmail] = useState("");
@@ -277,6 +277,30 @@ const SettingsModal = ({ settings, onSettingsChange, onClose }) => {
               </select>
             </div>
           </div>
+
+          {onShowOnboarding && (
+            <>
+              <hr className="settings-divider" />
+              <div className="setting-group">
+                <label className="setting-label">Help & Support</label>
+                <div className="setting-control">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onShowOnboarding();
+                    }}
+                    className="onboarding-link-button"
+                  >
+                    Show Getting Started Guide
+                  </button>
+                  <p className="setting-help-text">
+                    Need help connecting your Garmin account or syncing data? View the step-by-step guide.
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

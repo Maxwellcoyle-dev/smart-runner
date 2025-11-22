@@ -55,6 +55,12 @@ export const useOnboarding = () => {
     localStorage.removeItem(ONBOARDING_DISMISSED_KEY);
     setIsComplete(false);
     setIsDismissed(false);
+    // Force show onboarding when explicitly reset
+    setShouldShow(true);
+  };
+
+  const forceShowOnboarding = () => {
+    resetOnboarding();
     setShouldShow(true);
   };
 
@@ -66,6 +72,7 @@ export const useOnboarding = () => {
     completeOnboarding,
     dismissOnboarding,
     resetOnboarding,
+    forceShowOnboarding,
   };
 };
 
