@@ -621,12 +621,27 @@ app.get("/api/activities/:id/splits", authenticateToken, async (req, res) => {
       fitFileName
     );
 
+    console.log(`[SPLITS] Looking for FIT file: ${fitFilePath}`);
+    console.log(`[SPLITS] User ID: ${userId}, Activity ID: ${id}, Unit: ${unit}, Split Distance: ${splitDistance}m`);
+
     let splits = [];
 
     if (await fs.pathExists(fitFilePath)) {
+      console.log(`[SPLITS] FIT file found, extracting splits...`);
       // Use Python script to extract splits from FIT file
       const scriptPath = path.join(__dirname, "extract_splits.py");
+      
+      // Check if script exists
+      if (!(await fs.pathExists(scriptPath))) {
+        console.error(`[SPLITS] Python script not found at: ${scriptPath}`);
+        return res.status(500).json({ 
+          error: "Splits extraction script not found",
+          details: `Script path: ${scriptPath}`
+        });
+      }
+
       const command = `"${GARMINDB_PYTHON}" "${scriptPath}" "${fitFilePath}" ${splitDistance}`;
+      console.log(`[SPLITS] Executing: ${command}`);
 
       try {
         const result = await execAsync(command, {
@@ -636,47 +651,100 @@ app.get("/api/activities/:id/splits", authenticateToken, async (req, res) => {
         });
 
         const output = result.stdout || "";
+        const stderr = result.stderr || "";
+        
+        if (stderr) {
+          console.error(`[SPLITS] Python script stderr: ${stderr}`);
+        }
+
         if (!output || output.trim() === "") {
-          console.error("Python script returned empty output");
+          console.error(`[SPLITS] Python script returned empty output`);
+          console.error(`[SPLITS] stderr: ${stderr}`);
         } else {
           try {
             const splitData = JSON.parse(output);
             if (splitData.splits && splitData.splits.length > 0) {
               splits = splitData.splits;
               console.log(
-                `Extracted ${splits.length} splits from FIT file for activity ${id}`
+                `[SPLITS] Successfully extracted ${splits.length} splits from FIT file for activity ${id}`
               );
             } else if (splitData.error) {
-              console.error("Python script error:", splitData.error);
+              console.error(`[SPLITS] Python script error: ${splitData.error}`);
+            } else {
+              console.warn(`[SPLITS] No splits in response:`, splitData);
             }
           } catch (parseError) {
             console.error(
-              "Failed to parse Python script output:",
-              parseError.message,
-              output.substring(0, 200)
+              `[SPLITS] Failed to parse Python script output:`,
+              parseError.message
             );
+            console.error(`[SPLITS] Output (first 500 chars):`, output.substring(0, 500));
+            console.error(`[SPLITS] stderr:`, stderr);
           }
         }
       } catch (execError) {
         console.error(
-          "Error extracting splits from FIT file:",
-          execError.message,
-          execError.stdout,
-          execError.stderr
+          `[SPLITS] Error executing Python script:`,
+          execError.message
         );
+        console.error(`[SPLITS] stdout:`, execError.stdout);
+        console.error(`[SPLITS] stderr:`, execError.stderr);
+        console.error(`[SPLITS] code:`, execError.code);
         // Fall back to calculating from activity_records if FIT extraction fails
       }
     } else {
       // FIT file not found in user's directory
       console.log(
-        `FIT file not found for activity ${id} in user ${userId}'s directory`
+        `[SPLITS] FIT file not found for activity ${id} in user ${userId}'s directory`
       );
+      console.log(`[SPLITS] Expected path: ${fitFilePath}`);
+      
+      // Try alternative paths
+      const altPaths = [
+        path.join(userDataDir, "FitFiles", fitFileName),
+        path.join(userDataDir, fitFileName),
+        path.join(process.env.DATA_DIR || path.join(__dirname, "..", "data"), "FitFiles", "Activities", fitFileName),
+      ];
+      
+      for (const altPath of altPaths) {
+        if (await fs.pathExists(altPath)) {
+          console.log(`[SPLITS] Found FIT file at alternative path: ${altPath}`);
+          // Try to extract from alternative path
+          const scriptPath = path.join(__dirname, "extract_splits.py");
+          const command = `"${GARMINDB_PYTHON}" "${scriptPath}" "${altPath}" ${splitDistance}`;
+          try {
+            const result = await execAsync(command, {
+              maxBuffer: 10 * 1024 * 1024,
+              timeout: 30000,
+              cwd: __dirname,
+            });
+            const splitData = JSON.parse(result.stdout || "{}");
+            if (splitData.splits && splitData.splits.length > 0) {
+              splits = splitData.splits;
+              console.log(`[SPLITS] Extracted ${splits.length} splits from alternative path`);
+              break;
+            }
+          } catch (err) {
+            console.error(`[SPLITS] Failed to extract from alternative path:`, err.message);
+          }
+        }
+      }
     }
 
     if (splits.length === 0) {
-      return res
-        .status(404)
-        .json({ error: "No splits found for this activity" });
+      return res.status(404).json({ 
+        error: "No splits found for this activity",
+        details: {
+          activityId: id,
+          userId: userId,
+          unit: unit || "km",
+          fitFilePath: fitFilePath,
+          fitFileExists: await fs.pathExists(fitFilePath),
+          scriptPath: path.join(__dirname, "extract_splits.py"),
+          scriptExists: await fs.pathExists(path.join(__dirname, "extract_splits.py")),
+          pythonPath: GARMINDB_PYTHON,
+        }
+      });
     }
 
     res.json({

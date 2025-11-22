@@ -48,26 +48,21 @@ const Onboarding = ({
         id: "connect-garmin",
         title: "Connect Your Garmin Account",
         description:
-          "Link your Garmin Connect account to sync your running activities automatically.",
+          "Link your Garmin Connect account to see your activities and progress in real time.",
         icon: "🔗",
-        action: "Open Settings",
-        onAction: () => {
-          onOpenSettings();
-          // Check status after a delay to see if connection was successful
-          setTimeout(checkGarminStatus, 2000);
-        },
+        action: null,
         completed: garminStatus?.connected || false,
       },
       {
         id: "sync-data",
         title: "Sync Your Activities",
         description:
-          "Once connected, sync your activities to see your training data and progress.",
+          "Once connected, sync whenever you want to see your activities and progress.",
         icon: "📥",
         action: "How to Sync",
         onAction: null,
         completed: activitiesCount > 0,
-        info: "Click the 'Sync & Refresh' button in the header to download your activities from Garmin Connect.",
+        info: "Click the 'Sync & Refresh' button in the header to download your activities from Garmin Connect. This will take a few minutes, depending on the number of activities you have.",
       },
       {
         id: "explore",
